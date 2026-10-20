@@ -1,0 +1,7 @@
+import type { GameId } from "../../../shared/protocol.js";
+import type { GameDefinition } from "./types.js";
+import { tabu } from "./tabu/tabu.js";
+import { vampir } from "./vampir/vampir.js";
+import { okey, okey101 } from "./okey/okey.js";
+
+export const gameDefinitions: Record<GameId, GameDefinition> = { tabu, vampir, okey, okey101 };
