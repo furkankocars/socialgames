@@ -33,7 +33,7 @@ export function isWild(tile: Tile, okey: Okey): boolean {
 }
 
 /** Color/value a non-wild tile counts as; false jokers stand in for the okey. */
-function effective(tile: Tile, okey: Okey): { color: TileColor; value: number } {
+export function effective(tile: Tile, okey: Okey): { color: TileColor; value: number } {
   return tile.color === null ? { color: okey.color, value: okey.value } : { color: tile.color, value: tile.value };
 }
 

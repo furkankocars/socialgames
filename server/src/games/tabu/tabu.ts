@@ -1,5 +1,5 @@
 import type { TabuCard, TabuTeam, TabuView } from "../../../../shared/games/tabu.js";
-import { GameError, shuffle, type GameContext, type GameDefinition, type GameInstance } from "../types.js";
+import { GameError, shuffle, type GameAction, type GameContext, type GameDefinition, type GameInstance } from "../types.js";
 import { TABU_CARDS } from "./words.js";
 
 const PASS_LIMIT = 3;
@@ -12,6 +12,8 @@ export class TabuGame implements GameInstance {
   private activeTeam: TabuTeam = 0;
   /** Index of the next narrator inside each team. */
   private narratorIndex: [number, number] = [0, 0];
+  /** Fixed for the length of a turn, even if that player drops. */
+  private turnNarrator: string | null = null;
   private turnEndsAt: number | null = null;
   private passesLeft = PASS_LIMIT;
   private deck: TabuCard[] = [];
@@ -90,6 +92,13 @@ export class TabuGame implements GameInstance {
         this.log.push({ word: this.card!.word, result: action.type });
         this.nextCard();
         return;
+      case "skipTurn":
+        // Bots can't describe words; a bot narrator hands the turn over.
+        if (this.phase !== "ready" && this.phase !== "turn") throw new GameError("Şu an bunu yapamazsın.");
+        if (playerId !== this.narratorId() || !this.ctx.isBot(playerId)) throw new GameError("Bunu yapamazsın.");
+        this.ctx.clearTimers();
+        this.endTurn();
+        return;
       case "taboo": {
         this.requirePhase("turn");
         const team = this.teamOf(playerId);
@@ -106,7 +115,15 @@ export class TabuGame implements GameInstance {
     }
   }
 
+  botAction(playerId: string): GameAction | null {
+    if ((this.phase === "ready" || this.phase === "turn") && playerId === this.narratorId()) return { type: "skipTurn" };
+    return null;
+  }
+
   private startTurn() {
+    this.turnNarrator = this.narratorId();
+    // Rotation continues after whoever actually narrates, skipping bots.
+    this.narratorIndex[this.activeTeam] = Math.max(0, this.teams[this.activeTeam].indexOf(this.turnNarrator!));
     this.phase = "turn";
     this.passesLeft = PASS_LIMIT;
     this.log = [];
@@ -119,6 +136,7 @@ export class TabuGame implements GameInstance {
   }
 
   private endTurn() {
+    this.turnNarrator = null;
     this.turnEndsAt = null;
     this.card = null;
     this.narratorIndex[this.activeTeam]++;
@@ -138,10 +156,17 @@ export class TabuGame implements GameInstance {
     this.card = this.deck.pop()!;
   }
 
+  /** Whose turn it is to narrate; players run by a bot are passed over while anyone else is left. */
   private narratorId(): string | null {
+    if (this.phase === "turn") return this.turnNarrator;
     const team = this.teams[this.activeTeam];
     if (team.length === 0) return null;
-    return team[this.narratorIndex[this.activeTeam] % team.length];
+    const start = this.narratorIndex[this.activeTeam];
+    for (let i = 0; i < team.length; i++) {
+      const id = team[(start + i) % team.length];
+      if (!this.ctx.isBot(id)) return id;
+    }
+    return team[start % team.length];
   }
 
   private teamOf(playerId: string): TabuTeam | null {

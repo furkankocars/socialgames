@@ -13,5 +13,7 @@ export function useCountdown(endsAt: number | null): number {
 }
 
 export function nameOf(room: RoomView, id: string | null | undefined): string {
-  return room.players.find((p) => p.id === id)?.name ?? "Ayrılan oyuncu";
+  const player = room.players.find((p) => p.id === id);
+  if (!player) return "Ayrılan oyuncu";
+  return player.bot ? `${player.name} (bot)` : player.name;
 }
