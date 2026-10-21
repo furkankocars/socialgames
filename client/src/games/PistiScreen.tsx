@@ -97,6 +97,8 @@ export function PistiScreen({ room }: { room: RoomView }) {
   const playing = g.mySeat >= 0;
   const myTurn = playing && g.turn === g.mySeat && g.phase === "play";
   const [selected, setSelected] = useState<number | null>(null);
+  // The lobby is long; start at the top so the table and your hand are both on screen.
+  useEffect(() => window.scrollTo({ top: 0 }), []);
   const treatFor = useSeatTreats(room);
 
   const areaOf = (seat: number): Area => {
@@ -166,7 +168,7 @@ export function PistiScreen({ room }: { room: RoomView }) {
     if (selected === id && myTurn) void play(id);
     else setSelected(id);
   };
-  const drag = (id: number) => (e: ReactPointerEvent<HTMLElement>) => pointerDrag(e, "[data-drop=pile]", () => void play(id));
+  const drag = (id: number) => (e: ReactPointerEvent<HTMLElement>) => pointerDrag(e, "[data-drop=pile], [data-drop=felt]", () => void play(id));
 
   const sideName = (side: number) => g.sides[side].seats.map((s) => nameOf(room, g.seats[s].id)).join(" ve ");
   const plainName = (seat: number) => room.players.find((p) => p.id === g.seats[seat].id)?.name ?? "Ayrılan oyuncu";
@@ -234,7 +236,7 @@ export function PistiScreen({ room }: { room: RoomView }) {
       </div>
 
       <div className="pisti-table">
-        <div className={`pisti-felt n${n}`} data-treat="table">
+        <div className={`pisti-felt n${n}`} data-treat="table" data-drop={myTurn ? "felt" : undefined}>
           {g.seats.map((_, i) => (i === mySeat ? null : seat(i)))}
 
           <div className="pisti-center">
@@ -337,7 +339,7 @@ export function PistiScreen({ room }: { room: RoomView }) {
       {playing && (
         <div className="pisti-actions">
           <span className="muted small">
-            {myTurn ? "Kartı yere sürükle ya da seçip at." : "Sıranı beklerken kartını seçebilirsin."}
+            {myTurn ? "Kartı masaya sürükle ya da iki kez dokun." : "Sıranı beklerken kartını seçebilirsin."}
           </span>
           <button className="primary chunky" disabled={!myTurn || selected === null} onClick={() => selected !== null && play(selected)}>
             Kartı at

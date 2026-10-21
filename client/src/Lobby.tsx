@@ -66,6 +66,27 @@ const OPTIONS: Record<GameId, Option[]> = {
     TURN_TIME,
   ],
   okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, TURN_TIME],
+  chess: [
+    {
+      key: "minutes",
+      label: "Süre (kişi başı)",
+      choices: [{ value: 0, label: "Süresiz" }, ...nums([3, 5, 10, 15], " dk")],
+      initial: 10,
+      hint: (v) => (v.minutes ? "Süresi biten kaybeder. Saat beyazın ilk hamlesinden sonra işlemeye başlar." : "Herkes istediği kadar düşünebilir."),
+    },
+    { key: "increment", label: "Hamle başı ek süre", choices: nums([0, 2, 5, 10], " sn"), initial: 0, when: (v) => v.minutes > 0 },
+    {
+      key: "botLevel",
+      label: "Bot seviyesi",
+      choices: [
+        { value: 1, label: "Kolay" },
+        { value: 2, label: "Orta" },
+        { value: 3, label: "Zor" },
+      ],
+      initial: 2,
+      hint: "Masaya bot eklediysen ya da bir oyuncunun yerine bot geçerse bu seviyede oynar.",
+    },
+  ],
   pisti: [
     {
       key: "teams",
