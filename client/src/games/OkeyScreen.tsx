@@ -10,6 +10,7 @@ import { chime, clack, tick } from "../sound";
 import { Toggle } from "../Toggle";
 import { setColorblind, useColorblind } from "../prefs";
 import { pointerDrag } from "../drag";
+import { autoLay } from "../../../shared/games/okey-rules";
 import { TableChat, TreatIcon, TreatTray, useSeatChat } from "./TableChat";
 import { ROW, SLOTS, rackSummary, arrangeBest, arrangePairs, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
 
@@ -34,8 +35,11 @@ function JokerMark() {
   );
 }
 
-export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, fresh }: {
+export function TileFace({ tile, okey, small, onClick, onPointerDown, onDoubleClick, selected, fresh, faceDown }: {
   tile: Tile;
+  /** Turned over on your own rack: only you know what it is. */
+  faceDown?: boolean;
+  onDoubleClick?: () => void;
   okey?: OkeyView["okey"];
   small?: boolean;
   selected?: boolean;
@@ -44,15 +48,16 @@ export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, 
   onPointerDown?: (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
   const wild = okey && tile.color === okey.color && tile.value === okey.value;
-  const cls = ["tile", tile.color ?? "joker", small && "small", selected && "selected", onClick && "clickable", wild && "wild", fresh && "fresh"];
+  const cls = ["tile", tile.color ?? "joker", small && "small", selected && "selected", onClick && "clickable", wild && "wild", fresh && "fresh", faceDown && "face-down"];
   return (
     <div
       className={cls.filter(Boolean).join(" ")}
       onClick={onClick}
       onPointerDown={onPointerDown}
-      title={wild ? "Okey" : undefined}
+      onDoubleClick={onDoubleClick}
+      title={faceDown ? "Ters çevrili taş" : wild ? "Okey" : undefined}
     >
-      {tile.color === null ? (
+      {faceDown ? null : tile.color === null ? (
         <JokerMark />
       ) : (
         <>
@@ -60,7 +65,7 @@ export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, 
           <span className="tile-pip" />
         </>
       )}
-      {wild && <span className="tile-okey">okey</span>}
+      {wild && !faceDown && <span className="tile-okey">okey</span>}
     </div>
   );
 }
@@ -96,6 +101,25 @@ export function OkeyScreen({ room }: { room: RoomView }) {
   const [slots, setSlots] = useState<Slots>(() => loadSlots(storageKey));
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [fresh, setFresh] = useState<Set<number>>(new Set());
+  const flipKey = `${storageKey}.ters`;
+  const [flipped, setFlipped] = useState<Set<number>>(() => new Set(loadSlots(flipKey).filter((id): id is number => id !== null)));
+  useEffect(() => {
+    setFlipped(new Set(loadSlots(flipKey).filter((id): id is number => id !== null)));
+  }, [flipKey]);
+  const toggleFlip = (ids: number[]) =>
+    setFlipped((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
+      try {
+        localStorage.setItem(flipKey, JSON.stringify([...next]));
+      } catch {
+        // Flips just won't survive a refresh.
+      }
+      return next;
+    });
   const prevHand = useRef<Set<number> | null>(null);
   /** Slot a tile drawn by dragging should land in. */
   const drawTo = useRef<number | null>(null);
@@ -143,6 +167,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     lastNotice.current = g.notice;
   }, [g.notice, toast]);
   const summary = useMemo(() => rackSummary(synced, g.hand, g.okey, !is101), [synced, g.hand, g.okey, is101]);
+  // Only the okey can be turned over, so others can't spot it on your rack.
+  const okeyIds = g.hand.filter((t) => t.color === g.okey.color && t.value === g.okey.value).map((t) => t.id);
   const tileById = new Map(g.hand.map((t) => [t.id, t]));
   const mySeat = g.mySeat;
   const myTurn = g.turn === mySeat && g.phase !== "roundOver";
@@ -222,9 +248,21 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       ghost ?? e.currentTarget,
     );
 
+  /** With tiles selected, lay those; with none, find the best groups in the hand. */
   const lay = async (type: "open" | "layMelds") => {
-    const groups = selectedGroups(synced, selected);
-    if (groups.length === 0) return;
+    let groups = selectedGroups(synced, selected);
+    if (groups.length === 0) {
+      const auto = autoLay(g.hand, g.okey, g.opened[mySeat]);
+      if (!auto.groups) {
+        toast(
+          type === "open"
+            ? `Açmaya yetmiyor: elinde ${auto.points} sayı ve ${auto.pairs} çift var (101 sayı ya da 5 çift gerek).`
+            : "Masaya koyacak geçerli grup yok.",
+        );
+        return;
+      }
+      groups = auto.groups;
+    }
     const res = await send({ type, groups });
     if (res.ok) setSelected(new Set());
   };
@@ -408,6 +446,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
                       fresh={fresh.has(tile.id)}
                       onClick={() => toggle(tile.id)}
                       onPointerDown={dragTile(tile.id)}
+                      onDoubleClick={okeyIds.includes(tile.id) ? () => toggleFlip([tile.id]) : undefined}
+                      faceDown={flipped.has(tile.id) && okeyIds.includes(tile.id)}
                     />
                   )}
                 </div>
@@ -453,6 +493,11 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         <button className="wood" onClick={() => setSlots(arrangePairs(g.hand, g.okey))}>
           Çift diz
         </button>
+        {okeyIds.length > 0 && (
+          <button className="wood" onClick={() => toggleFlip(okeyIds)} title="Elindeki okeyi ters çevirir; okeye çift dokunmak da çevirir">
+            {okeyIds.every((id) => flipped.has(id)) ? "Okeyi düz çevir" : "Okeyi ters çevir"}
+          </button>
+        )}
         {g.canShowIndicator && (
           <button className="wood" onClick={() => send({ type: "showIndicator" })} title="Göstergenin eşi elinde">
             Göstergeyi göster
@@ -463,13 +508,13 @@ export function OkeyScreen({ room }: { room: RoomView }) {
           <>
             {is101 && g.mustUseTileId !== null && <button onClick={() => send({ type: "returnDiscard" })}>Aldığımı geri koy</button>}
             {is101 && !g.opened[mySeat] && (
-              <button className="success chunky" disabled={selected.size === 0} onClick={() => lay("open")}>
-                Elimi aç
+              <button className="success chunky" onClick={() => lay("open")}>
+                {selected.size > 0 ? "Seçtiklerimle aç" : "Elimi aç"}
               </button>
             )}
             {is101 && g.opened[mySeat] && (
-              <button className="success chunky" disabled={selected.size === 0} onClick={() => lay("layMelds")}>
-                Yere koy
+              <button className="success chunky" onClick={() => lay("layMelds")}>
+                {selected.size > 0 ? "Seçtiklerimi koy" : "Yere koy"}
               </button>
             )}
             {!is101 && (
@@ -485,8 +530,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       </div>
       <p className="muted small hint">
         {is101 && myTurn && g.phase === "discard"
-          ? "Açmak için taşları seç; ıstakada aralarında boşluk olan taşlar ayrı grup sayılır."
-          : "Taşları sürükleyip istediğin yuvaya bırak. Çekmek için ortadaki desteyi ya da soldaki taşı ıstakaya, atmak için taşı sağ alt köşeye sürükle."}
+          ? "Elimi aç en iyi dizilişi bulup kendisi açar. İstersen taşları seçip kendin aç; aralarında boşluk olan taşlar ayrı grup sayılır."
+          : "Taşları sürükleyip istediğin yuvaya bırak. Çekmek için ortadaki desteyi ya da soldaki taşı ıstakaya, atmak için taşı sağ alt köşeye sürükle. Okeye çift dokununca ters döner."}
       </p>
 
       <TableChat room={room} />

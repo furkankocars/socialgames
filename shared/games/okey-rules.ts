@@ -32,7 +32,7 @@ export type GroupKind = "run" | "set" | "pair";
  * Checks a single laid-down group. Wilds are placed to give the group the most
  * points. Returns null when the tiles don't form a valid run or set.
  */
-export function analyzeGroup(tiles: Tile[], okey: Okey): { kind: "run" | "set"; points: number; ordered: Tile[] } | null {
+export function analyzeGroup(tiles: Tile[], okey: Okey, wrap = false): { kind: "run" | "set"; points: number; ordered: Tile[] } | null {
   if (tiles.length < 3) return null;
   const real = tiles.filter((t) => !isWild(t, okey));
   const wildTiles = tiles.filter((t) => isWild(t, okey));
@@ -53,13 +53,15 @@ export function analyzeGroup(tiles: Tile[], okey: Okey): { kind: "run" | "set"; 
   if (len > 13) return null;
   let best: { points: number; ordered: Tile[] } | null = null;
   // A run covers positions start..start+len-1 where position 14 is the 1 after 13.
-  for (let start = 1; start + len - 1 <= 14; start++) {
+  // 101 doesn't allow 12-13-1, so only a wrapping caller (normal okey) gets position 14.
+  const top = wrap ? 14 : 13;
+  for (let start = 1; start + len - 1 <= top; start++) {
     const slots: (Tile | null)[] = new Array(len).fill(null);
     let fits = true;
     normals.forEach((n, i) => {
       if (!fits) return;
       let pos = n.value;
-      if (pos === 1 && start > 1) pos = 14;
+      if (pos === 1 && start > 1 && wrap) pos = 14;
       const slot = pos - start;
       if (slot < 0 || slot >= len || slots[slot]) fits = false;
       else slots[slot] = real[i];
@@ -100,7 +102,7 @@ function kindOf(tile: Tile, okey: Okey): number {
 }
 
 /** Every run and set the hand could form, by tile kind. */
-function candidates(counts: number[]): Candidate[] {
+function candidates(counts: number[], wrap: boolean): Candidate[] {
   const wilds = counts[WILD];
   const has = (color: number, value: number) => counts[color * 13 + value - 1] > 0;
   const out: Candidate[] = [];
@@ -123,7 +125,7 @@ function candidates(counts: number[]): Candidate[] {
       const kinds: number[] = [];
       let points = 0;
       let used = 0;
-      for (let pos = start; pos <= 14 && kinds.length < 13; pos++) {
+      for (let pos = start; pos <= (wrap ? 14 : 13) && kinds.length < 13; pos++) {
         const value = pos === 14 ? 1 : pos;
         if (has(c, value)) kinds.push(c * 13 + value - 1);
         else if (used < wilds) {
@@ -148,13 +150,15 @@ function candidates(counts: number[]): Candidate[] {
 }
 
 /**
- * The best way to split a hand into runs and sets. `byTiles` favours using
- * as many tiles as possible (normal okey); otherwise the most points (101).
+ * The best way to split a hand into runs and sets. `byTiles` is normal okey:
+ * use as many tiles as possible, and 12-13-1 counts as a run. Otherwise it is
+ * 101: the most points, with no run past 13.
  */
 export function bestGroups(tiles: Tile[], okey: Okey, byTiles = false): { groups: Tile[][]; points: number } {
+  const wrap = byTiles;
   const counts = new Array(WILD + 1).fill(0);
   for (const t of tiles) counts[kindOf(t, okey)]++;
-  const all = candidates(counts);
+  const all = candidates(counts, wrap);
   const byFirst = new Map<number, Candidate[]>();
   for (const cand of all) {
     for (const k of new Set(cand.kinds)) byFirst.set(k, [...(byFirst.get(k) ?? []), cand]);
@@ -198,5 +202,61 @@ export function bestGroups(tiles: Tile[], okey: Okey, byTiles = false): { groups
   }
   const groups = picks.map((p) => p.kinds.map((k) => pool.get(k)!.shift()!));
   // Count each group the way the table will when it's laid down.
-  return { groups, points: groups.reduce((n, g) => n + (analyzeGroup(g, okey)?.points ?? 0), 0) };
+  return { groups, points: groups.reduce((n, g) => n + (analyzeGroup(g, okey, wrap)?.points ?? 0), 0) };
+}
+
+/** As many pairs as the hand holds; okeys pair up with a loose tile first, then with each other. */
+export function bestPairs(tiles: Tile[], okey: Okey): Tile[][] {
+  const wild = tiles.filter((t) => isWild(t, okey));
+  const byKind = new Map<number, Tile[]>();
+  for (const t of tiles) {
+    if (isWild(t, okey)) continue;
+    const k = kindOf(t, okey);
+    byKind.set(k, [...(byKind.get(k) ?? []), t]);
+  }
+  const pairs: Tile[][] = [];
+  const loose: Tile[] = [];
+  for (const group of byKind.values()) {
+    for (let i = 0; i + 1 < group.length; i += 2) pairs.push([group[i], group[i + 1]]);
+    if (group.length % 2) loose.push(group[group.length - 1]);
+  }
+  // Pair okeys with the highest loose tiles, since those cost most if left in hand.
+  loose.sort((a, b) => effective(b, okey).value - effective(a, okey).value);
+  while (wild.length && loose.length) pairs.push([loose.shift()!, wild.shift()!]);
+  if (wild.length === 2) pairs.push([wild[0], wild[1]]);
+  return pairs;
+}
+
+/** The server wants a tile left to discard; drop the cheapest tile or group so one stays. */
+function leaveOne(groups: Tile[][], handSize: number, okey: Okey): Tile[][] {
+  if (groups.flat().length < handSize) return groups;
+  let best: { groups: Tile[][]; lost: number } | null = null;
+  groups.forEach((g, i) => {
+    const before = analyzeGroup(g, okey)?.points ?? 0;
+    const options = g.length >= 4 ? [g.slice(1), g.slice(0, -1)] : [];
+    for (const shorter of options) {
+      const after = analyzeGroup(shorter, okey);
+      if (!after) continue;
+      const lost = before - after.points;
+      if (!best || lost < best.lost) best = { groups: groups.map((x, j) => (j === i ? shorter : x)), lost };
+    }
+    if (!best || before < best.lost) best = { groups: groups.filter((_, j) => j !== i), lost: before };
+  });
+  return best!.groups;
+}
+
+export type AutoLay = { groups: number[][]; how: "series" | "pairs"; points: number } | { groups: null; points: number; pairs: number };
+
+/** 101: the groups to open with (or lay down later) without picking tiles by hand. */
+export function autoLay(hand: Tile[], okey: Okey, opened: "series" | "pairs" | null): AutoLay {
+  const series = leaveOne(bestGroups(hand, okey).groups, hand.length, okey);
+  const points = series.reduce((n, g) => n + (analyzeGroup(g, okey)?.points ?? 0), 0);
+  const pairs = bestPairs(hand, okey);
+  const pairGroups = leaveOne(pairs, hand.length, okey);
+  const ids = (gs: Tile[][]) => gs.map((g) => g.map((t) => t.id));
+  if (opened === "series") return series.length ? { groups: ids(series), how: "series", points } : { groups: null, points, pairs: pairs.length };
+  if (opened === "pairs") return pairGroups.length ? { groups: ids(pairGroups), how: "pairs", points } : { groups: null, points, pairs: pairs.length };
+  if (points >= 101) return { groups: ids(series), how: "series", points };
+  if (pairGroups.length >= 5) return { groups: ids(pairGroups), how: "pairs", points };
+  return { groups: null, points, pairs: pairs.length };
 }
