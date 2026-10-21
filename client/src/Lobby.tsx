@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GAMES, type GameId, type RoomView } from "../../shared/protocol";
+import { GAMES, type GameId, type GameInfo, type RoomView } from "../../shared/protocol";
 import { request } from "./socket";
 import { useAct, useToast } from "./toast";
 import { Toggle } from "./Toggle";
@@ -87,6 +87,24 @@ const OPTIONS: Record<GameId, Option[]> = {
       hint: "Masaya bot eklediysen ya da bir oyuncunun yerine bot geçerse bu seviyede oynar.",
     },
   ],
+  pisti: [
+    {
+      key: "teams",
+      label: "Eşli oyna",
+      toggle: true,
+      choices: ON_OFF,
+      initial: 1,
+      hint: "4 kişide karşılıklı oturanlar eş olur, puanları birlikte sayılır. 2 kişide geçerli değil.",
+    },
+    {
+      key: "target",
+      label: "Oyun kaç sayıya",
+      choices: nums([51, 101, 151]),
+      initial: 101,
+      hint: "Pişti 10, vale pişti 20, kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1 sayı.",
+    },
+    TURN_TIME,
+  ],
 };
 
 const OPTIONS_KEY = "socialgames.options";
@@ -121,6 +139,7 @@ export function Lobby({ room }: { room: RoomView }) {
   };
   const isOkey = room.selectedGame === "okey" || room.selectedGame === "okey101";
   const connected = room.players.filter((p) => p.connected).length;
+  const badCount = !!selected.playerCounts && !selected.playerCounts.includes(connected);
 
   const share = async () => {
     const url = `${location.origin}/?oda=${room.code}`;
@@ -191,7 +210,7 @@ export function Lobby({ room }: { room: RoomView }) {
               >
                 <span className="radio" />
                 <strong>{g.name}</strong>
-                <span className="small muted">{g.minPlayers === g.maxPlayers ? `${g.minPlayers} kişi` : `${g.minPlayers}–${g.maxPlayers} kişi`}</span>
+                <span className="small muted">{playerCountLabel(g)}</span>
                 <span className="desc">{g.description}</span>
               </button>
             </li>
@@ -244,12 +263,14 @@ export function Lobby({ room }: { room: RoomView }) {
         )}
 
         {isHost ? (
-          <button className="primary wide" onClick={start} disabled={connected < selected.minPlayers || connected > selected.maxPlayers}>
+          <button className="primary wide" onClick={start} disabled={connected < selected.minPlayers || connected > selected.maxPlayers || badCount}>
             {connected < selected.minPlayers
               ? `${selected.minPlayers - connected} oyuncu daha gerekli`
               : connected > selected.maxPlayers
                 ? `En fazla ${selected.maxPlayers} kişi`
-                : `${selected.name} başlat`}
+                : badCount
+                  ? `${playerCountLabel(selected)} gerekli`
+                  : `${selected.name} başlat`}
           </button>
         ) : (
           <p className="muted">Oyunu oda sahibi seçip başlatacak.</p>
@@ -257,4 +278,9 @@ export function Lobby({ room }: { room: RoomView }) {
       </section>
     </div>
   );
+}
+
+function playerCountLabel(g: GameInfo) {
+  if (g.playerCounts) return `${g.playerCounts.join(" ya da ")} kişi`;
+  return g.minPlayers === g.maxPlayers ? `${g.minPlayers} kişi` : `${g.minPlayers}–${g.maxPlayers} kişi`;
 }

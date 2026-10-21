@@ -182,6 +182,9 @@ export class RoomManager {
     const players = room.players.filter((p) => p.connected && !p.left);
     if (players.length < info.minPlayers) throw new GameError(`${info.name} için en az ${info.minPlayers} oyuncu gerekli.`);
     if (players.length > info.maxPlayers) throw new GameError(`${info.name} en fazla ${info.maxPlayers} kişiyle oynanır.`);
+    if (info.playerCounts && !info.playerCounts.includes(players.length)) {
+      throw new GameError(`${info.name} ${info.playerCounts.join(" ya da ")} kişiyle oynanır.`);
+    }
     if (!info.bots && players.some((p) => p.robot)) throw new GameError(`${info.name} botlarla oynanmaz, önce botları çıkar.`);
     const ctx: GameContext = {
       players: players.map((p) => ({ id: p.id, name: p.name })),

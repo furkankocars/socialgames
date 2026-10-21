@@ -18,6 +18,7 @@ Arkadaş grubuyla tarayıcıdan oynanan masa ve grup oyunları. Biri oda açar, 
 | Okey | 4 | Var | 106 taş, gösterge ve okey. Seri ya da per ile, veya 7 çiftle bitir. Normal bitiş +2, çiftten ya da okey atarak bitiş +4. Normal ya da katlamalı oynanır. |
 | 101 Okey | 4 | Var | 101 sayıyla ya da 5 çiftle el aç, masadaki gruplara işle. Yandan alınan taş o el kullanılmalı. Bitiren -101, açamayan 202 ceza alır. Çiftten ya da okeyle bitişte cezalar iki katı. Az puan kazanır. |
 | Satranç | 2 | Var | Tam kurallar: rok, geçerken alma, terfi, mat, pat, üç tekrar, 50 hamle, yetersiz taş. Satranç saati, hamle başı ek süre, beraberlik teklifi, renk değiştiren rövanş. Kolay, orta ve zor bot. |
+| Pişti | 2 ya da 4 | Var | Yerdeki üst kartla aynı kartı ya da vale atan yerdeki kartları alır. Tek karta aynısı pişti (10), valeye vale 20. El sonunda kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1. 4 kişide eşli oynanabilir. |
 
 <p>
   <img src="docs/ekran/tabu-anlatici-mobil.jpg" alt="Tabu, anlatıcı ekranı" width="23%">

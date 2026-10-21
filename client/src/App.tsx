@@ -7,6 +7,7 @@ import { TabuScreen } from "./games/TabuScreen";
 import { VampirScreen } from "./games/VampirScreen";
 import { OkeyScreen } from "./games/OkeyScreen";
 import { ChessScreen } from "./games/ChessScreen";
+import { PistiScreen } from "./games/PistiScreen";
 import { setSound, useSoundEnabled } from "./sound";
 
 export function App() {
@@ -74,6 +75,7 @@ function Main() {
             {room.selectedGame === "vampir" && <VampirScreen room={room} />}
             {(room.selectedGame === "okey" || room.selectedGame === "okey101") && <OkeyScreen room={room} />}
             {room.selectedGame === "chess" && <ChessScreen room={room} />}
+            {room.selectedGame === "pisti" && <PistiScreen room={room} />}
           </>
         )}
       </main>
