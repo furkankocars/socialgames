@@ -10,6 +10,7 @@ Arkadaşlarla aynı odada oynanan grup oyunları platformu. Biri oda açar, 4 ha
 | Vampir Köylü | 4-16 | Her 4 kişiye 1 vampir, 1 gözcü, 5+ kişide 1 doktor. Gece vampirler ısırır, doktor korur, gözcü bakar; gündüz herkes oylar. |
 | Okey | 4 | 106 taş, gösterge ve okey. Seri/per ya da 7 çift ile bitir. Normal bitiş +2, çiftten ya da okey atarak bitiş +4. |
 | 101 Okey | 4 | 101 sayıyla ya da 5 çiftle el aç, masadaki gruplara işle. Yandan alınan taş o el kullanılmalı. Bitiren -101, açmayan 202 ceza, açanlar elde kalan taşların toplamı. Çiftten ya da okeyle bitişte cezalar 2 katı. Az puan kazanır. |
+| Satranç | 2 | Tam kurallar: rok, geçerken alma, terfi, şah mat, pat, üç tekrar, 50 hamle, yetersiz taş. İsteğe bağlı satranç saati ve ek süre, beraberlik teklifi, pes etme, renkleri değiştiren rövanş. Taşlar sürüklenir ya da dokunarak oynanır. Kolay, orta ve zor bot. |
 
 ## Geliştirme
 
