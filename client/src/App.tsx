@@ -6,6 +6,7 @@ import { Lobby } from "./Lobby";
 import { TabuScreen } from "./games/TabuScreen";
 import { VampirScreen } from "./games/VampirScreen";
 import { OkeyScreen } from "./games/OkeyScreen";
+import { setSound, useSoundEnabled } from "./sound";
 
 export function App() {
   return (
@@ -18,6 +19,7 @@ export function App() {
 function Main() {
   const { room, ready } = useConnection();
   const act = useAct();
+  const sound = useSoundEnabled();
 
   if (!ready) {
     return (
@@ -43,6 +45,11 @@ function Main() {
           </span>
         </div>
         <div className="topbar-actions">
+          {room.status === "playing" && (
+            <button className="ghost" aria-pressed={sound} onClick={() => setSound(!sound)}>
+              {sound ? "Sesi kapat" : "Sesi aç"}
+            </button>
+          )}
           {room.status === "playing" && isHost && (
             <button className="ghost" onClick={() => confirm("Oyunu bitirip lobiye dönülsün mü?") && act(request("room:backToLobby"))}>
               Lobiye dön
