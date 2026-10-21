@@ -3,13 +3,15 @@ import "./okey.css";
 import type { RoomView } from "../../../shared/protocol";
 import type { OkeyAction, OkeyView, Tile } from "../../../shared/games/okey";
 import { request } from "../socket";
-import { useAct } from "../toast";
-import { nameOf } from "../hooks";
+import { useAct, useToast } from "../toast";
+import { nameOf, useCountdown } from "../hooks";
 import { Avatar } from "../Avatar";
-import { chime, clack } from "../sound";
+import { chime, clack, tick } from "../sound";
+import { Toggle } from "../Toggle";
+import { setColorblind, useColorblind } from "../prefs";
 import { pointerDrag } from "../drag";
 import { TableChat, TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
-import { ROW, SLOTS, arrangePairs, arrangeRuns, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
+import { ROW, SLOTS, rackSummary, arrangeBest, arrangePairs, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
 
 const COLOR_NAMES = { red: "Kırmızı", yellow: "Sarı", blue: "Mavi", black: "Siyah" } as const;
 
@@ -130,6 +132,17 @@ export function OkeyScreen({ room }: { room: RoomView }) {
   }, [g.hand]);
 
   const treatFor = useSeatTreats(room);
+  const toast = useToast();
+  const colorblind = useColorblind();
+  // The server sends time left rather than a clock time, so device clocks don't matter.
+  const turnEndsAt = useMemo(() => (g.turnMsLeft === null ? null : Date.now() + g.turnMsLeft), [g]);
+  const secondsLeft = useCountdown(turnEndsAt);
+  const lastNotice = useRef(g.notice);
+  useEffect(() => {
+    if (g.notice && g.notice !== lastNotice.current) toast(g.notice);
+    lastNotice.current = g.notice;
+  }, [g.notice, toast]);
+  const summary = useMemo(() => rackSummary(synced, g.hand, g.okey, !is101), [synced, g.hand, g.okey, is101]);
   const tileById = new Map(g.hand.map((t) => [t.id, t]));
   const mySeat = g.mySeat;
   const myTurn = g.turn === mySeat && g.phase !== "roundOver";
@@ -149,6 +162,9 @@ export function OkeyScreen({ room }: { room: RoomView }) {
   useEffect(() => {
     if (myTurn) chime();
   }, [myTurn]);
+  useEffect(() => {
+    if (myTurn && turnEndsAt && secondsLeft > 0 && secondsLeft <= 5) tick();
+  }, [myTurn, turnEndsAt, secondsLeft]);
 
   const toggle = (id: number) =>
     setSelected((s) => {
@@ -240,6 +256,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
           {name}
           {player?.bot && <span className="seat-tag">bot</span>}
         </span>
+        {turn && turnEndsAt && <span className={`seat-clock ${secondsLeft <= 5 ? "low" : ""}`}>{secondsLeft} sn</span>}
         <span className="seat-meta">
           {s.handCount} taş · {s.score} puan
           {is101 && g.opened[index] && ` · ${g.opened[index] === "pairs" ? "çiftten açtı" : "açtı"}`}
@@ -257,15 +274,15 @@ export function OkeyScreen({ room }: { room: RoomView }) {
           ? "Sıra sende: aç, işle ya da bir taş at."
           : "Sıra sende: bir taş at ya da bitir."
       : `${nameOf(room, g.seats[g.turn].id)} oynuyor…`;
+  const clock = myTurn && turnEndsAt ? ` (${secondsLeft} sn)` : "";
 
   return (
     <div className="okey" data-drag-layer>
       <div className="okey-hud">
         <span className="hud-item">
           <span className="hud-label">El</span>
-          <strong>
-            {g.round}/{g.totalRounds}
-          </strong>
+          <strong>{g.katlamali ? g.round : `${g.round}/${g.totalRounds}`}</strong>
+          {g.katlamali && <span className="hud-tag">Katlamalı</span>}
         </span>
         <TreatTray />
         <span className="hud-item">
@@ -318,6 +335,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
 
           <div className={`felt-status ${myTurn ? "mine" : ""}`} role="status">
             {status}
+            {clock}
           </div>
 
           {g.phase === "roundOver" && g.lastRound && (
@@ -393,13 +411,47 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         ))}
       </div>
 
+      <div className="rack-summary" aria-live="polite">
+        {is101 && !g.opened[mySeat] ? (
+          <>
+            <span>
+              Elinde <strong>{summary.best}</strong> sayı{" "}
+              {summary.best >= 101 ? <em className="ok">açmaya yeter</em> : <span className="muted">· açmak için {101 - summary.best} daha</span>}
+            </span>
+            <span>
+              <strong>{summary.pairs}</strong> çift{" "}
+              {summary.pairs >= 5 ? <em className="ok">çiftten açmaya yeter</em> : <span className="muted">· çiftten açmak için 5</span>}
+            </span>
+          </>
+        ) : is101 ? (
+          <span>
+            Elinde <strong>{g.hand.length}</strong> taş · işlenebilecek gruplar <strong>{summary.best}</strong> sayı
+          </span>
+        ) : (
+          <>
+            <span>
+              Seriye giren <strong>{summary.bestTiles}</strong>/{g.hand.length} taş · <strong>{summary.best}</strong> sayı
+            </span>
+            <span>
+              <strong>{summary.pairs}</strong> çift {summary.pairs >= 7 && <em className="ok">çiftten bitebilir</em>}
+            </span>
+          </>
+        )}
+        {summary.points < summary.best && <span className="muted small">Istakadaki diziliş {summary.points} sayı ediyor; Seri diz en iyi dizilişe getirir.</span>}
+      </div>
+
       <div className="okey-actions">
-        <button className="wood" onClick={() => setSlots(arrangeRuns(g.hand, g.okey))}>
+        <button className="wood" onClick={() => setSlots(arrangeBest(g.hand, g.okey, !is101))}>
           Seri diz
         </button>
         <button className="wood" onClick={() => setSlots(arrangePairs(g.hand, g.okey))}>
           Çift diz
         </button>
+        {g.canShowIndicator && (
+          <button className="wood" onClick={() => send({ type: "showIndicator" })} title="Göstergenin eşi elinde">
+            Göstergeyi göster
+          </button>
+        )}
         <span className="spacer" />
         {myTurn && g.phase === "discard" && (
           <>
@@ -434,7 +486,10 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       <TableChat room={room} />
 
       <div className="card">
-        <h4>Puanlar {is101 && <span className="muted small">(az olan kazanır)</span>}</h4>
+        <h4>
+          Puanlar {is101 && <span className="muted small">(az olan kazanır)</span>}
+          {g.katlamali && <span className="muted small">(sıfıra düşen olunca oyun biter)</span>}
+        </h4>
         <table className="scores">
           <tbody>
             {g.seats.map((s, i) => (
@@ -446,6 +501,10 @@ export function OkeyScreen({ room }: { room: RoomView }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="card">
+        <Toggle on={colorblind} onChange={setColorblind} label="Renk körü modu" hint="Renkler ayrıca şekille gösterilir: kırmızı üçgen, sarı kare, mavi baklava, siyah daire." />
       </div>
     </div>
   );

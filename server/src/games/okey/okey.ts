@@ -18,6 +18,8 @@ type Variant = OkeyView["variant"];
 const OPEN_POINTS = 101;
 const OPEN_PAIRS = 5;
 const UNOPENED_PENALTY = 202;
+/** A turn that runs out is played by the bot; this many moves at most. */
+const MAX_TIMEOUT_MOVES = 4;
 
 export class OkeyGame implements GameInstance {
   private seats: string[];
@@ -37,6 +39,14 @@ export class OkeyGame implements GameInstance {
   private opened: ("series" | "pairs" | null)[] = [null, null, null, null];
   private mustUseTileId: number | null = null;
   private nextMeldId = 1;
+  /** Katlamalı: everyone starts with points and loses them; first to 0 ends the game. */
+  private katlamali: boolean;
+  private indicatorBonus: boolean;
+  private shownIndicator = [false, false, false, false];
+  private turnMs: number;
+  private turnEndsAt: number | null = null;
+  /** The latest thing that happened outside a normal move, for everyone to read. */
+  private notice: string | null = null;
 
   constructor(
     private ctx: GameContext,
@@ -45,6 +55,11 @@ export class OkeyGame implements GameInstance {
   ) {
     this.seats = ctx.players.map((p) => p.id);
     this.totalRounds = clampInt(options.rounds, 1, 20, variant === "okey" ? 5 : 3);
+    this.katlamali = variant === "okey" && options.katlamali === 1;
+    this.indicatorBonus = variant === "okey" && options.gosterge !== 0;
+    const seconds = clampInt(options.turnSeconds, 0, 120, 0);
+    this.turnMs = seconds === 0 ? 0 : Math.max(10, seconds) * 1000;
+    if (this.katlamali) this.scores.fill(clampInt(options.startPoints, 4, 50, 20));
     this.dealer = Math.floor(ctx.random() * 4);
     this.startRound();
   }
@@ -67,8 +82,11 @@ export class OkeyGame implements GameInstance {
     this.table = [];
     this.opened = [null, null, null, null];
     this.mustUseTileId = null;
+    this.shownIndicator = [false, false, false, false];
+    this.notice = null;
     this.turn = this.dealer;
     this.phase = "discard";
+    this.armTurnTimer();
   }
 
   getView(playerId: string): OkeyView {
@@ -77,7 +95,12 @@ export class OkeyGame implements GameInstance {
       variant: this.variant,
       phase: this.phase,
       round: this.round,
-      totalRounds: this.totalRounds,
+      totalRounds: this.katlamali ? 0 : this.totalRounds,
+      katlamali: this.katlamali,
+      turnMsLeft: this.turnEndsAt === null ? null : Math.max(0, this.turnEndsAt - Date.now()),
+      turnSeconds: this.turnMs / 1000,
+      canShowIndicator: mySeat >= 0 && this.canShowIndicator(mySeat),
+      notice: this.notice,
       seats: this.seats.map((id, s) => ({
         id,
         handCount: this.hands[s].length,
@@ -100,6 +123,13 @@ export class OkeyGame implements GameInstance {
   }
 
   handleAction(playerId: string, action: { type: string; [key: string]: unknown }): void {
+    const before = `${this.round}:${this.turn}:${this.phase}`;
+    this.apply(playerId, action);
+    // A new turn (or a drawn tile) restarts the clock; 101 lays within a turn don't.
+    if (`${this.round}:${this.turn}:${this.phase}` !== before) this.armTurnTimer();
+  }
+
+  private apply(playerId: string, action: { type: string; [key: string]: unknown }): void {
     const seat = this.seats.indexOf(playerId);
     if (seat < 0) throw new GameError("Bu masada değilsin.");
 
@@ -117,6 +147,14 @@ export class OkeyGame implements GameInstance {
     const hand = this.hands[seat];
 
     switch (action.type) {
+      case "showIndicator": {
+        if (!this.canShowIndicator(seat)) throw new GameError("Göstergeyi şimdi gösteremezsin.");
+        this.shownIndicator[seat] = true;
+        const deltas = this.seats.map((_, s) => (this.katlamali ? (s === seat ? 0 : -1) : s === seat ? 1 : 0));
+        deltas.forEach((d, s) => (this.scores[s] += d));
+        this.notice = `${this.name(seat)} göstergeyi gösterdi (${this.katlamali ? "herkese -1" : "+1"}).`;
+        return;
+      }
       case "drawCenter": {
         this.requirePhase("draw");
         const tile = this.center.pop();
@@ -172,11 +210,18 @@ export class OkeyGame implements GameInstance {
         const tile = this.takeFromHand(seat, [tileId])[0];
         this.discards[seat].push(tile);
         const okeyThrown = isWild(tile, this.okey);
-        const points = pairs || okeyThrown ? 4 : 2;
-        const deltas = [0, 0, 0, 0];
-        deltas[seat] = points;
         const how = [pairs && "çiftten", okeyThrown && "okey atarak"].filter(Boolean).join(" ve ");
-        this.endRound(seat, deltas, `${this.name(seat)} ${how ? how + " " : ""}bitirdi (+${points}).`, rest);
+        if (this.katlamali) {
+          // Each of çift and okey doubles what the others lose: 2, 4 or 8.
+          const loss = 2 * (pairs ? 2 : 1) * (okeyThrown ? 2 : 1);
+          const deltas = this.seats.map((_, s) => (s === seat ? 0 : -loss));
+          this.endRound(seat, deltas, `${this.name(seat)} ${how ? how + " " : ""}bitirdi, herkes ${loss} puan kaybetti.`, rest);
+        } else {
+          const points = pairs || okeyThrown ? 4 : 2;
+          const deltas = [0, 0, 0, 0];
+          deltas[seat] = points;
+          this.endRound(seat, deltas, `${this.name(seat)} ${how ? how + " " : ""}bitirdi (+${points}).`, rest);
+        }
         return;
       }
       case "open": {
@@ -276,7 +321,55 @@ export class OkeyGame implements GameInstance {
   }
 
   private isGameOver() {
-    return this.phase === "roundOver" && this.round >= this.totalRounds;
+    if (this.phase !== "roundOver") return false;
+    return this.katlamali ? this.scores.some((p) => p <= 0) : this.round >= this.totalRounds;
+  }
+
+  /** The indicator's twin can be shown once, on your first turn, before your first discard. */
+  private canShowIndicator(seat: number) {
+    return (
+      this.indicatorBonus &&
+      this.phase !== "roundOver" &&
+      this.turn === seat &&
+      !this.shownIndicator[seat] &&
+      this.discards[seat].length === 0 &&
+      this.hands[seat].some((t) => t.color === this.indicator.color && t.value === this.indicator.value)
+    );
+  }
+
+  private armTurnTimer() {
+    this.ctx.clearTimers();
+    this.turnEndsAt = null;
+    if (!this.turnMs || this.phase === "roundOver") return;
+    this.turnEndsAt = Date.now() + this.turnMs;
+    const round = this.round;
+    const seat = this.turn;
+    this.ctx.setTimer(() => {
+      if (this.round !== round || this.turn !== seat || this.phase === "roundOver") return;
+      this.playForTimeout(seat);
+      this.ctx.update();
+    }, this.turnMs);
+  }
+
+  /** Time ran out: finish the seat's turn the way a bot would. */
+  private playForTimeout(seat: number) {
+    const id = this.seats[seat];
+    for (let i = 0; i < MAX_TIMEOUT_MOVES && this.turn === seat && this.phase !== "roundOver"; i++) {
+      const before = `${this.turn}:${this.phase}:${this.hands[seat].length}`;
+      try {
+        const action = okeyBotAction(this.getView(id));
+        if (action) this.handleAction(id, action);
+      } catch {
+        // Fall through to the plain move below.
+      }
+      if (`${this.turn}:${this.phase}:${this.hands[seat].length}` !== before) continue;
+      if (this.phase === "draw") this.handleAction(id, { type: "drawCenter" });
+      else {
+        if (this.mustUseTileId !== null) this.handleAction(id, { type: "returnDiscard" });
+        else this.handleAction(id, { type: "discard", tileId: this.hands[seat].at(-1)!.id });
+      }
+    }
+    this.notice = `${this.name(seat)} süresini doldurdu, hamlesi otomatik yapıldı.`;
   }
 
   /** Validates tile-id groups from the client against the player's hand. */

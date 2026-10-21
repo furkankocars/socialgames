@@ -20,13 +20,21 @@ function rigged(dealerHand: [TileColor | null, number][], handSize: number) {
   return { tiles, indicator, okey: okeyTile };
 }
 
-function newGame(variant: "okey" | "okey101", hand: [TileColor | null, number][]) {
-  const { ctx } = fakeContext(4, 3);
-  const game = new OkeyGame(ctx, variant, { rounds: 2 });
+function newGame(variant: "okey" | "okey101", hand: [TileColor | null, number][], options: Record<string, unknown> = { rounds: 2 }) {
+  const { ctx, runTimers } = fakeContext(4, 3);
+  const game = new OkeyGame(ctx, variant, options);
   game.startRound(rigged(hand, variant === "okey" ? 14 : 21));
   const dealer = game.getView("p0").dealer;
-  return { game, dealerId: `p${dealer}`, dealer };
+  return { game, dealerId: `p${dealer}`, dealer, runTimers };
 }
+
+const winningHand: [TileColor | null, number][] = [
+  ["red", 1], ["red", 2], ["red", 3], ["red", 4],
+  ["blue", 9], ["yellow", 9], ["black", 9],
+  ["yellow", 11], ["yellow", 12], ["yellow", 13], ["yellow", 1],
+  ["red", 5], ["blue", 5], ["yellow", 5],
+  ["blue", 12],
+];
 
 describe("Okey", () => {
   it("deals 15 to the dealer and 14 to the others", () => {
@@ -48,13 +56,7 @@ describe("Okey", () => {
   });
 
   it("finishes a valid hand and scores it", () => {
-    const { game, dealerId, dealer } = newGame("okey", [
-      ["red", 1], ["red", 2], ["red", 3], ["red", 4],
-      ["blue", 9], ["yellow", 9], ["black", 9],
-      ["yellow", 11], ["yellow", 12], ["yellow", 13], ["yellow", 1],
-      ["red", 5], ["blue", 5], ["yellow", 5],
-      ["blue", 12],
-    ]);
+    const { game, dealerId, dealer } = newGame("okey", winningHand);
     const hand = game.getView(dealerId).hand;
     const loose = hand.find((t) => t.color === "blue" && t.value === 12)!;
     const wrong = hand.find((t) => t.color === "red" && t.value === 1)!;
@@ -64,6 +66,66 @@ describe("Okey", () => {
     expect(v.phase).toBe("roundOver");
     expect(v.seats[dealer].score).toBe(2);
     expect(v.lastRound!.winnerId).toBe(dealerId);
+  });
+});
+
+describe("Okey settings", () => {
+  it("katlamalı: everyone starts with points and the others lose them", () => {
+    const { game, dealerId, dealer } = newGame("okey", winningHand, { katlamali: 1, startPoints: 10 });
+    expect(game.getView("p0").seats.map((s) => s.score)).toEqual([10, 10, 10, 10]);
+    expect(game.getView("p0").totalRounds).toBe(0);
+    const loose = game.getView(dealerId).hand.find((t) => t.color === "blue" && t.value === 12)!;
+    game.handleAction(dealerId, { type: "finish", tileId: loose.id });
+    const v = game.getView("p0");
+    expect(v.seats.map((s, i) => (i === dealer ? s.score : s.score + 2))).toEqual([10, 10, 10, 10]);
+    expect(v.gameOver).toBe(false);
+  });
+
+  it("katlamalı: the game ends once someone runs out of points", () => {
+    const { game, dealerId } = newGame("okey", winningHand, { katlamali: 1, startPoints: 4 });
+    const loose = game.getView(dealerId).hand.find((t) => t.color === "blue" && t.value === 12)!;
+    game.handleAction(dealerId, { type: "finish", tileId: loose.id });
+    expect(game.getView("p0").gameOver).toBe(false);
+    game.handleAction("p0", { type: "nextRound" });
+    game.startRound(rigged(winningHand, 14));
+    const dealer2 = game.getView("p0").dealer;
+    const id2 = `p${dealer2}`;
+    const loose2 = game.getView(id2).hand.find((t) => t.color === "blue" && t.value === 12)!;
+    game.handleAction(id2, { type: "finish", tileId: loose2.id });
+    expect(game.getView("p0").gameOver).toBe(true);
+  });
+
+  it("lets the holder of the indicator's twin show it once, before discarding", () => {
+    const { game, dealerId, dealer } = newGame("okey", [["black", 6]], { katlamali: 1, startPoints: 20 });
+    const others = game.getView("p0").seats.map((_, i) => i).filter((i) => i !== dealer);
+    expect(game.getView(dealerId).canShowIndicator).toBe(true);
+    expect(game.getView(`p${others[0]}`).canShowIndicator).toBe(false);
+    game.handleAction(dealerId, { type: "showIndicator" });
+    const v = game.getView("p0");
+    expect(v.seats[dealer].score).toBe(20);
+    others.forEach((i) => expect(v.seats[i].score).toBe(19));
+    expect(() => game.handleAction(dealerId, { type: "showIndicator" })).toThrow();
+  });
+
+  it("can turn the indicator bonus off", () => {
+    const { game, dealerId } = newGame("okey", [["black", 6]], { gosterge: 0 });
+    expect(game.getView(dealerId).canShowIndicator).toBe(false);
+  });
+
+  it("plays the turn automatically when the clock runs out", () => {
+    const { game, dealerId, dealer, runTimers } = newGame("okey", [], { turnSeconds: 30 });
+    expect(game.getView("p0").turnMsLeft).toBeGreaterThan(29000);
+    runTimers();
+    const v = game.getView("p0");
+    expect(v.seats[dealer].handCount).toBe(14);
+    expect(v.turn).toBe((dealer + 1) % 4);
+    expect(v.notice).toMatch(/süresini doldurdu/);
+    expect(game.getView(dealerId).turnMsLeft).toBeGreaterThan(29000);
+  });
+
+  it("has no clock when turns are untimed", () => {
+    const { game } = newGame("okey", []);
+    expect(game.getView("p0").turnMsLeft).toBeNull();
   });
 });
 

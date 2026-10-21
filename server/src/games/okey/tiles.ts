@@ -1,10 +1,8 @@
 import { TILE_COLORS, nextValue, type Tile, type TileColor } from "../../../../shared/games/okey.js";
 import { shuffle } from "../types.js";
+import { analyzeGroup, effective, isPair, isWild, split, type Okey } from "../../../../shared/games/okey-rules.js";
 
-export interface Okey {
-  color: TileColor;
-  value: number;
-}
+export { analyzeGroup, effective, isPair, isWild, type Okey };
 
 /** The 106-tile set: two of every color/value plus two false jokers. */
 export function createTiles(): Tile[] {
@@ -26,80 +24,6 @@ export function dealSetup(random: () => number) {
   const indicator = tiles.splice(indicatorIndex, 1)[0];
   const okey: Okey = { color: indicator.color!, value: nextValue(indicator.value) };
   return { tiles, indicator, okey };
-}
-
-export function isWild(tile: Tile, okey: Okey): boolean {
-  return tile.color === okey.color && tile.value === okey.value;
-}
-
-/** Color/value a non-wild tile counts as; false jokers stand in for the okey. */
-export function effective(tile: Tile, okey: Okey): { color: TileColor; value: number } {
-  return tile.color === null ? { color: okey.color, value: okey.value } : { color: tile.color, value: tile.value };
-}
-
-interface Split {
-  normals: { color: TileColor; value: number }[];
-  wilds: number;
-}
-
-function split(tiles: Tile[], okey: Okey): Split {
-  const normals = tiles.filter((t) => !isWild(t, okey)).map((t) => effective(t, okey));
-  return { normals, wilds: tiles.length - normals.length };
-}
-
-export type GroupKind = "run" | "set" | "pair";
-
-/**
- * Checks a single laid-down group. Wilds are placed to give the group the most
- * points. Returns null when the tiles don't form a valid run or set.
- */
-export function analyzeGroup(tiles: Tile[], okey: Okey): { kind: "run" | "set"; points: number; ordered: Tile[] } | null {
-  if (tiles.length < 3) return null;
-  const real = tiles.filter((t) => !isWild(t, okey));
-  const wildTiles = tiles.filter((t) => isWild(t, okey));
-  const normals = real.map((t) => effective(t, okey));
-  if (normals.length === 0) return null;
-
-  if (tiles.length <= 4) {
-    const value = normals[0].value;
-    const colors = new Set(normals.map((n) => n.color));
-    if (normals.every((n) => n.value === value) && colors.size === normals.length) {
-      return { kind: "set", points: value * tiles.length, ordered: [...real, ...wildTiles] };
-    }
-  }
-
-  const color = normals[0].color;
-  if (!normals.every((n) => n.color === color)) return null;
-  const len = tiles.length;
-  if (len > 13) return null;
-  let best: { points: number; ordered: Tile[] } | null = null;
-  // A run covers positions start..start+len-1 where position 14 is the 1 after 13.
-  for (let start = 1; start + len - 1 <= 14; start++) {
-    const slots: (Tile | null)[] = new Array(len).fill(null);
-    let fits = true;
-    normals.forEach((n, i) => {
-      if (!fits) return;
-      let pos = n.value;
-      if (pos === 1 && start > 1) pos = 14;
-      const slot = pos - start;
-      if (slot < 0 || slot >= len || slots[slot]) fits = false;
-      else slots[slot] = real[i];
-    });
-    if (!fits) continue;
-    const wildQueue = wildTiles.slice();
-    const ordered = slots.map((t) => t ?? wildQueue.shift()!);
-    let points = 0;
-    for (let p = start; p < start + len; p++) points += p === 14 ? 1 : p;
-    if (!best || points > best.points) best = { points, ordered };
-  }
-  return best && { kind: "run", ...best };
-}
-
-export function isPair(tiles: Tile[], okey: Okey): boolean {
-  if (tiles.length !== 2) return false;
-  const { normals } = split(tiles, okey);
-  if (normals.length < 2) return true;
-  return normals[0].color === normals[1].color && normals[0].value === normals[1].value;
 }
 
 /** Whether the tiles can be split into seven pairs. */
