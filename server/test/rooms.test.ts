@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RoomView } from "../../shared/protocol.js";
-import { BOT_DELAY_MS, BOT_TAKEOVER_MS, RoomManager } from "../src/rooms.js";
+import { BOT_DELAY_MS, BOT_TAKEOVER_MS, CHAT_GAP_MS, RoomManager } from "../src/rooms.js";
 import type { OkeyView } from "../../shared/games/okey.js";
 import { seeded } from "./helpers.js";
 
@@ -145,5 +145,38 @@ describe("RoomManager", () => {
     // A room with only bots left in it closes.
     for (const id of ["a", "b", "c"]) rooms.leaveRoom(id);
     expect(() => rooms.joinRoom("a", code, "Ali")).toThrow("Oda bulunamadı.");
+  });
+
+  it("passes chat lines and drinks to everyone at the table", () => {
+    vi.useFakeTimers();
+    const { rooms, views } = setup();
+    const code = rooms.createRoom("a", "Ali");
+    rooms.joinRoom("b", code, "Banu");
+    rooms.chat("a", { text: "  hoş geldin  " });
+    vi.advanceTimersByTime(CHAT_GAP_MS);
+    rooms.chat("a", { treat: "cay", to: "b" });
+    vi.advanceTimersByTime(CHAT_GAP_MS);
+    rooms.chat("b", { treat: "kahve", to: null });
+    const chat = views.get("b")!.chat;
+    expect(chat.map((c) => [c.name, c.text, c.treat, c.to])).toEqual([
+      ["Ali", "hoş geldin", undefined, undefined],
+      ["Ali", undefined, "cay", "b"],
+      ["Banu", undefined, "kahve", null],
+    ]);
+    expect(views.get("a")!.chat).toHaveLength(3);
+  });
+
+  it("rejects empty, unknown, self-addressed and too fast chat", () => {
+    vi.useFakeTimers();
+    const { rooms } = setup();
+    const code = rooms.createRoom("a", "Ali");
+    rooms.joinRoom("b", code, "Banu");
+    expect(() => rooms.chat("a", { text: "   " })).toThrow(/Boş/);
+    expect(() => rooms.chat("a", { treat: "rakı" })).toThrow(/ikram yok/);
+    expect(() => rooms.chat("a", { treat: "cay", to: "a" })).toThrow(/masada değil/);
+    expect(() => rooms.chat("a", { treat: "cay", to: "zz" })).toThrow(/masada değil/);
+    rooms.chat("a", { text: "selam" });
+    expect(() => rooms.chat("a", { text: "selam" })).toThrow(/yavaş/);
+    expect(() => rooms.chat("x", { text: "selam" })).toThrow(/odada değilsin/);
   });
 });

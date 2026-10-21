@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import "./okey.css";
 import type { RoomView } from "../../../shared/protocol";
 import type { OkeyAction, OkeyView, Tile } from "../../../shared/games/okey";
@@ -7,6 +7,8 @@ import { useAct } from "../toast";
 import { nameOf } from "../hooks";
 import { Avatar } from "../Avatar";
 import { chime, clack } from "../sound";
+import { pointerDrag } from "../drag";
+import { TableChat, TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
 import { ROW, SLOTS, arrangePairs, arrangeRuns, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
 
 const COLOR_NAMES = { red: "Kırmızı", yellow: "Sarı", blue: "Mavi", black: "Siyah" } as const;
@@ -30,13 +32,14 @@ function JokerMark() {
   );
 }
 
-export function TileFace({ tile, okey, small, onClick, selected, fresh }: {
+export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, fresh }: {
   tile: Tile;
   okey?: OkeyView["okey"];
   small?: boolean;
   selected?: boolean;
   fresh?: boolean;
   onClick?: () => void;
+  onPointerDown?: (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
   const wild = okey && tile.color === okey.color && tile.value === okey.value;
   const cls = ["tile", tile.color ?? "joker", small && "small", selected && "selected", onClick && "clickable", wild && "wild", fresh && "fresh"];
@@ -44,8 +47,7 @@ export function TileFace({ tile, okey, small, onClick, selected, fresh }: {
     <div
       className={cls.filter(Boolean).join(" ")}
       onClick={onClick}
-      draggable={!!onClick}
-      onDragStart={(e) => e.dataTransfer.setData("text/plain", String(tile.id))}
+      onPointerDown={onPointerDown}
       title={wild ? "Okey" : undefined}
     >
       {tile.color === null ? (
@@ -62,18 +64,21 @@ export function TileFace({ tile, okey, small, onClick, selected, fresh }: {
 }
 
 /** A seat's discards: the top tile with the ones below peeking out. */
-function DiscardSpot({ tiles, okey, label, onTake, area }: {
+function DiscardSpot({ tiles, okey, label, onTake, onDragTake, dropTarget, area }: {
   tiles: Tile[];
   okey: OkeyView["okey"];
   label: string;
   area: string;
   onTake?: () => void;
+  onDragTake?: (e: ReactPointerEvent<HTMLElement>) => void;
+  /** This corner accepts a tile dragged from the rack. */
+  dropTarget?: string;
 }) {
   const last = tiles.at(-1);
   return (
-    <div className={`discard-spot ${area} ${onTake ? "takeable" : ""}`}>
+    <div className={`discard-spot ${area} ${onTake ? "takeable" : ""} ${dropTarget ? "droppable" : ""}`} data-drop={dropTarget}>
       <div className={`discard-pile ${tiles.length > 1 ? "stacked" : ""}`}>
-        {last ? <TileFace key={last.id} tile={last} okey={okey} small onClick={onTake} /> : <div className="tile-ghost" />}
+        {last ? <TileFace key={last.id} tile={last} okey={okey} small onClick={onTake} onPointerDown={onDragTake} /> : <div className="tile-ghost" />}
       </div>
       <span className="spot-label">{label}</span>
     </div>
@@ -90,6 +95,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [fresh, setFresh] = useState<Set<number>>(new Set());
   const prevHand = useRef<Set<number> | null>(null);
+  /** Slot a tile drawn by dragging should land in. */
+  const drawTo = useRef<number | null>(null);
 
   const synced = useMemo(() => syncSlots(slots, g.hand), [slots, g.hand]);
   useEffect(() => {
@@ -113,12 +120,16 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     prevHand.current = ids;
     if (!prev || prev.size === 0) return;
     const added = [...ids].filter((id) => !prev.has(id));
+    const slot = drawTo.current;
+    drawTo.current = null;
     if (added.length === 0 || added.length > 2) return;
+    if (slot !== null && added.length === 1) setSlots((prev) => moveTiles(syncSlots(prev, g.hand), added, slot));
     setFresh(new Set(added));
     const t = setTimeout(() => setFresh(new Set()), 700);
     return () => clearTimeout(t);
   }, [g.hand]);
 
+  const treatFor = useSeatTreats(room);
   const tileById = new Map(g.hand.map((t) => [t.id, t]));
   const mySeat = g.mySeat;
   const myTurn = g.turn === mySeat && g.phase !== "roundOver";
@@ -155,11 +166,45 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     clack(0.6);
   };
 
-  const discard = async (finish: boolean) => {
-    if (single === null) return;
-    const res = await send(finish ? { type: "finish", tileId: single } : { type: "discard", tileId: single });
+  const discard = async (finish: boolean, tileId = single) => {
+    if (tileId === null) return;
+    const res = await send(finish ? { type: "finish", tileId } : { type: "discard", tileId });
     if (res.ok) setSelected(new Set());
   };
+
+  const canDiscard = myTurn && g.phase === "discard";
+  const slotOf = (target: HTMLElement) => {
+    const d = target.dataset.drop ?? "";
+    if (d.startsWith("slot:")) return Number(d.slice(5));
+    // Dropped on the rack but between slots: first free one.
+    return d === "rack" ? synced.indexOf(null) : null;
+  };
+
+  /** Rack tile: drop on a slot to move it, on your discard corner to throw it. */
+  const dragTile = (id: number) => (e: ReactPointerEvent<HTMLElement>) =>
+    pointerDrag(e, "[data-drop]", (target) => {
+      if (target.dataset.drop === "discard") {
+        void discard(false, id);
+        return;
+      }
+      const slot = slotOf(target);
+      if (slot !== null && slot >= 0) moveSelectedTo(slot, selected.has(id) ? selectedIds : [id]);
+    });
+
+  /** Center stack or left discard: drag onto the rack to draw into that slot. */
+  const dragDraw = (action: OkeyAction, ghost?: HTMLElement | null) => (e: ReactPointerEvent<HTMLElement>) =>
+    pointerDrag(
+      e,
+      "[data-drop^=slot], [data-drop=rack]",
+      (target) => {
+        const slot = slotOf(target);
+        drawTo.current = slot !== null && slot >= 0 ? slot : null;
+        void send(action).then((res) => {
+          if (!res.ok) drawTo.current = null;
+        });
+      },
+      ghost ?? e.currentTarget,
+    );
 
   const lay = async (type: "open" | "layMelds") => {
     const groups = selectedGroups(synced, selected);
@@ -179,11 +224,17 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     const player = room.players.find((p) => p.id === s.id);
     const name = player?.name ?? "Ayrılan oyuncu";
     const turn = g.turn === index && g.phase !== "roundOver";
+    const treat = treatFor(s.id);
     return (
-      <div className={`seat ${area} ${turn ? "turn" : ""}`}>
+      <div className={`seat ${area} ${turn ? "turn" : ""}`} data-treat={s.id}>
         <span className="seat-avatar">
           <Avatar id={s.id} name={name} />
           {g.dealer === index && <span className="dealer-chip" title="Dağıtan">D</span>}
+          {treat && (
+            <span key={treat} className="seat-treat">
+              <TreatIcon treat={treat} size={26} />
+            </span>
+          )}
         </span>
         <span className="seat-name">
           {name}
@@ -208,7 +259,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       : `${nameOf(room, g.seats[g.turn].id)} oynuyor…`;
 
   return (
-    <div className="okey">
+    <div className="okey" data-drag-layer>
       <div className="okey-hud">
         <span className="hud-item">
           <span className="hud-label">El</span>
@@ -216,6 +267,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
             {g.round}/{g.totalRounds}
           </strong>
         </span>
+        <TreatTray />
         <span className="hud-item">
           <span className="hud-label">Okey</span>
           <strong>
@@ -226,7 +278,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       </div>
 
       <div className="okey-table">
-        <div className="felt">
+        <div className="felt" data-treat="table">
           {seat(seatAt(2), "top")}
           {seat(leftSeat, "left")}
           {seat(seatAt(1), "right")}
@@ -239,15 +291,25 @@ export function OkeyScreen({ room }: { room: RoomView }) {
             okey={g.okey}
             label="Soldan al"
             onTake={canDraw && g.seats[leftSeat].discards.length > 0 ? () => send({ type: "drawDiscard" }) : undefined}
+            onDragTake={canDraw ? dragDraw({ type: "drawDiscard" }) : undefined}
           />
-          <DiscardSpot area="c-br" tiles={g.seats[mySeat].discards} okey={g.okey} label="Attığın" />
+          <DiscardSpot
+            area="c-br"
+            tiles={g.seats[mySeat].discards}
+            okey={g.okey}
+            label={canDiscard ? "Atmak için bırak" : "Attığın"}
+            dropTarget={canDiscard ? "discard" : undefined}
+          />
 
           <div className="felt-center">
             <div className="indicator">
               <TileFace tile={g.indicator} small />
               <span className="spot-label">Gösterge</span>
             </div>
-            <button className={`draw-stack ${canDraw ? "ready" : ""}`} disabled={!canDraw} onClick={() => send({ type: "drawCenter" })} aria-label="Ortadan çek">
+            <button className={`draw-stack ${canDraw ? "ready" : ""}`} disabled={!canDraw} onClick={() => send({ type: "drawCenter" })}
+              onPointerDown={canDraw ? (e) => dragDraw({ type: "drawCenter" }, e.currentTarget.querySelector<HTMLElement>(".stack-tiles"))(e) : undefined}
+              aria-label="Ortadan çek"
+            >
               <span className="stack-tiles" style={{ ["--depth" as string]: Math.min(6, Math.ceil(g.centerCount / 8)) }} />
               <span className="stack-count">{g.centerCount}</span>
               <span className="spot-label">Ortadan çek</span>
@@ -300,7 +362,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         </div>
       )}
 
-      <div className="istaka" onDragOver={(e) => e.preventDefault()}>
+      <div className="istaka" data-drop="rack">
         {[0, 1].map((row) => (
           <div key={row} className="istaka-row">
             {Array.from({ length: ROW }, (_, col) => {
@@ -312,14 +374,18 @@ export function OkeyScreen({ room }: { room: RoomView }) {
                   key={i}
                   className={`slot ${!tile && selected.size > 0 ? "target" : ""}`}
                   onClick={() => !tile && moveSelectedTo(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const dragged = Number(e.dataTransfer.getData("text/plain"));
-                    if (Number.isFinite(dragged)) moveSelectedTo(i, selected.has(dragged) ? selectedIds : [dragged]);
-                  }}
+                  data-drop={`slot:${i}`}
                 >
-                  {tile && <TileFace tile={tile} okey={g.okey} selected={selected.has(tile.id)} fresh={fresh.has(tile.id)} onClick={() => toggle(tile.id)} />}
+                  {tile && (
+                    <TileFace
+                      tile={tile}
+                      okey={g.okey}
+                      selected={selected.has(tile.id)}
+                      fresh={fresh.has(tile.id)}
+                      onClick={() => toggle(tile.id)}
+                      onPointerDown={dragTile(tile.id)}
+                    />
+                  )}
                 </div>
               );
             })}
@@ -362,8 +428,10 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       <p className="muted small hint">
         {is101 && myTurn && g.phase === "discard"
           ? "Açmak için taşları seç; ıstakada aralarında boşluk olan taşlar ayrı grup sayılır."
-          : "Taşa dokunup seç, sonra boş bir yuvaya dokunarak taşı. Bilgisayarda sürükleyebilirsin."}
+          : "Taşları sürükleyip istediğin yuvaya bırak. Çekmek için ortadaki desteyi ya da soldaki taşı ıstakaya, atmak için taşı sağ alt köşeye sürükle."}
       </p>
+
+      <TableChat room={room} />
 
       <div className="card">
         <h4>Puanlar {is101 && <span className="muted small">(az olan kazanır)</span>}</h4>

@@ -1,0 +1,192 @@
+/*
+ * Table chat: a ruled paper log like a kahvehane order pad, with drawn drinks
+ * that can be sent to one player or the whole table.
+ */
+.chat-log {
+  list-style: none;
+  margin: 0.25rem 0 0.6rem;
+  padding: 0;
+  max-height: 190px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--rule);
+}
+.chat-line {
+  padding: 0.35rem 0;
+  border-top: 1px dashed var(--rule);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.chat-line:first-child {
+  border-top: 0;
+}
+.chat-line strong {
+  font-weight: 700;
+}
+.chat-line.mine strong {
+  color: var(--accent);
+}
+.chat-line.treat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.chat-line.treat strong {
+  color: var(--ink);
+  font-style: normal;
+}
+.chat-line.treat .treat-icon {
+  flex: none;
+}
+
+.treat-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.treat-to {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 0.25rem;
+}
+.treat-to select,
+.chat-form input {
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper);
+  padding: 0.45rem 0.6rem;
+}
+.treat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem 0.4rem 0.5rem;
+  border-color: var(--wood-dark);
+  font-weight: 600;
+}
+
+.chat-form {
+  display: flex;
+  gap: 0.4rem;
+}
+.chat-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Drawn drinks */
+.treat-icon .glass,
+.treat-icon .cup,
+.treat-icon .bottle,
+.treat-icon .handle,
+.treat-icon .steam {
+  stroke: var(--ink);
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.treat-icon .glass,
+.treat-icon .handle,
+.treat-icon .steam {
+  fill: none;
+}
+.treat-icon .steam {
+  stroke: var(--ink-soft);
+  stroke-width: 1;
+}
+.treat-icon .saucer {
+  fill: #e9dcc0;
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+.treat-icon.cay .drink {
+  fill: #a8401c;
+}
+.treat-icon.oralet .drink {
+  fill: #e48a1d;
+}
+.treat-icon .cup {
+  fill: var(--tile);
+}
+.treat-icon.kahve .drink {
+  fill: #5a341a;
+}
+.treat-icon .bottle {
+  fill: #cfe2d6;
+}
+.treat-icon .label {
+  fill: var(--accent);
+}
+.treat-icon .bubble {
+  fill: #fff;
+}
+
+/* A drink set down next to a player's seat on the felt. */
+.seat-treat {
+  position: absolute;
+  left: -16px;
+  bottom: -4px;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fbf6e9;
+  box-shadow: 0 2px 4px rgb(0 0 0 / 0.35);
+  animation: treat-arrive 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+@keyframes treat-arrive {
+  from {
+    translate: 0 -18px;
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat-treat {
+    animation: none;
+  }
+}
+.treat-btn {
+  touch-action: none;
+}
+.table-chat .hint {
+  margin: 0 0 0.5rem;
+}
+.drag-ghost.treat-icon {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+/* Drink tray in the table's header row. */
+.treat-tray {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.treat-tray .hud-label {
+  margin-right: 4px;
+}
+.tray-btn {
+  padding: 3px;
+  border-radius: 50%;
+  border-color: var(--rule);
+  background: var(--tile);
+  touch-action: none;
+  line-height: 0;
+}
+@media (max-width: 480px) {
+  .treat-tray .hud-label {
+    display: none;
+  }
+  .treat-tray {
+    gap: 2px;
+  }
+  .tray-btn {
+    padding: 2px;
+  }
+}

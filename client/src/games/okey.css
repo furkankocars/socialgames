@@ -633,3 +633,32 @@ button.wood:active:not(:disabled) {
     border-radius: 4px;
   }
 }
+
+/* Drag and drop: tiles follow the finger, targets light up under it. */
+.tile.clickable,
+.draw-stack.ready {
+  touch-action: none;
+}
+.slot.drop-over {
+  background: rgb(240 199 94 / 0.45);
+  box-shadow: inset 0 0 0 2px #f0c75e;
+}
+.discard-spot.droppable .discard-pile {
+  outline: 2px dashed rgb(240 199 94 / 0.7);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.discard-spot.drop-over .discard-pile {
+  outline-style: solid;
+  outline-color: #f0c75e;
+  background: rgb(240 199 94 / 0.2);
+}
+.seat.drop-over .seat-avatar {
+  background: #fbf6e9;
+  box-shadow: 0 0 0 6px rgb(251 246 233 / 0.35);
+}
+.felt.drop-over {
+  box-shadow:
+    inset 0 3px 10px rgb(0 0 0 / 0.45),
+    inset 0 0 0 3px rgb(240 199 94 / 0.55);
+}

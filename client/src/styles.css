@@ -542,3 +542,18 @@ button.chunky.plain:active:not(:disabled) {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Pointer drag and drop (drag.ts) */
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 50;
+  margin: 0;
+  pointer-events: none;
+  rotate: -4deg;
+  filter: drop-shadow(0 8px 10px rgb(0 0 0 / 0.35));
+}
+.drag-source {
+  opacity: 0.35;
+}
