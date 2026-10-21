@@ -10,6 +10,8 @@ interface RoomPlayer {
   bot: boolean;
   /** Walked out of a running game; only the bot keeps the seat until it ends. */
   left: boolean;
+  /** Added by the host to fill a seat; always played by a bot. */
+  robot: boolean;
 }
 
 interface Room {
@@ -38,6 +40,7 @@ export const BOT_DELAY_MS = 1000;
 export type Notify = (playerId: string, view: RoomView | null) => void;
 
 export class RoomManager {
+  private nextBotId = 1;
   private rooms = new Map<string, Room>();
   private roomOfPlayer = new Map<string, string>();
   private lobbyCleanup = new Map<string, ReturnType<typeof setTimeout>>();
@@ -58,7 +61,7 @@ export class RoomManager {
     const room: Room = {
       code,
       hostId: playerId,
-      players: [{ id: playerId, name, connected: true, bot: false, left: false }],
+      players: [{ id: playerId, name, connected: true, bot: false, left: false, robot: false }],
       selectedGame: "tabu",
       game: null,
       seated: new Set(),
@@ -92,7 +95,7 @@ export class RoomManager {
       if (room.game) throw new GameError("Oyun başladı, bitmesini bekle.");
       if (room.players.length >= MAX_ROOM_PLAYERS) throw new GameError("Oda dolu.");
       this.leaveRoom(playerId);
-      room.players.push({ id: playerId, name, connected: true, bot: false, left: false });
+      room.players.push({ id: playerId, name, connected: true, bot: false, left: false, robot: false });
       this.roomOfPlayer.set(playerId, code);
     }
     this.broadcast(room);
@@ -114,7 +117,7 @@ export class RoomManager {
     } else {
       room.players = room.players.filter((p) => p.id !== playerId);
     }
-    if (!room.players.some((p) => !p.left)) {
+    if (!room.players.some((p) => !p.left && !p.robot)) {
       this.deleteRoom(room);
       return;
     }
@@ -171,6 +174,7 @@ export class RoomManager {
     const players = room.players.filter((p) => p.connected && !p.left);
     if (players.length < info.minPlayers) throw new GameError(`${info.name} için en az ${info.minPlayers} oyuncu gerekli.`);
     if (players.length > info.maxPlayers) throw new GameError(`${info.name} en fazla ${info.maxPlayers} kişiyle oynanır.`);
+    if (!info.bots && players.some((p) => p.robot)) throw new GameError(`${info.name} botlarla oynanmaz, önce botları çıkar.`);
     const ctx: GameContext = {
       players: players.map((p) => ({ id: p.id, name: p.name })),
       update: () => this.broadcast(room),
@@ -197,9 +201,28 @@ export class RoomManager {
     this.broadcast(room);
   }
 
+  addBot(playerId: string): void {
+    const room = this.hostRoom(playerId);
+    if (room.game) throw new GameError("Oyun devam ediyor.");
+    const info = GAMES.find((g) => g.id === room.selectedGame)!;
+    if (!info.bots) throw new GameError(`${info.name} botlarla oynanmaz.`);
+    if (room.players.length >= MAX_ROOM_PLAYERS) throw new GameError("Oda dolu.");
+    let n = 1;
+    while (room.players.some((p) => p.name === `Bot ${n}`)) n++;
+    room.players.push({ id: `bot-${this.nextBotId++}`, name: `Bot ${n}`, connected: true, bot: true, left: false, robot: true });
+    this.broadcast(room);
+  }
+
   kick(playerId: string, target: string): void {
     const room = this.hostRoom(playerId);
     if (target === playerId) throw new GameError("Kendini atamazsın.");
+    const robot = room.players.find((p) => p.id === target && p.robot);
+    if (robot) {
+      if (room.game) throw new GameError("Oyun sırasında bot çıkarılamaz.");
+      room.players = room.players.filter((p) => p !== robot);
+      this.broadcast(room);
+      return;
+    }
     if (!room.players.some((p) => p.id === target && !p.left)) throw new GameError("Oyuncu bulunamadı.");
     this.leaveRoom(target);
   }
@@ -224,7 +247,7 @@ export class RoomManager {
     room.seated = new Set();
     room.players = room.players.filter((p) => !p.left);
     for (const p of room.players) {
-      p.bot = false;
+      p.bot = p.robot;
       this.cancelTakeover(p.id);
       // Their lobby grace may have run out during the game.
       if (!p.connected && !this.lobbyCleanup.has(p.id)) this.scheduleLobbyCleanup(p.id);
@@ -296,7 +319,7 @@ export class RoomManager {
   }
 
   private pickNewHost(room: Room) {
-    const others = room.players.filter((p) => !p.left && p.id !== room.hostId);
+    const others = room.players.filter((p) => !p.left && !p.robot && p.id !== room.hostId);
     const next = others.find((p) => p.connected) ?? others[0];
     if (next) room.hostId = next.id;
   }
@@ -326,7 +349,7 @@ export class RoomManager {
   }
 
   private broadcast(room: Room) {
-    for (const p of room.players) if (!p.left) this.notify(p.id, this.viewFor(room, p.id));
+    for (const p of room.players) if (!p.left && !p.robot) this.notify(p.id, this.viewFor(room, p.id));
     this.scheduleBots(room);
   }
 }
