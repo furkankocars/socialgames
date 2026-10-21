@@ -1,0 +1,434 @@
+/*
+ * Tabu: the physical card game on a paper table. Team plates as the score,
+ * a draining ring as the sand timer, and a printed card that is dealt in
+ * for every new word.
+ */
+.tabu {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.tabu-scores {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.team-plate {
+  --team: var(--team-0);
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.15rem 0.5rem;
+  padding: 0.65rem 0.8rem 0.7rem;
+  border-radius: 10px;
+  background: #fbf8f2;
+  border: 1.5px solid var(--rule);
+  border-top: 5px solid var(--team);
+  transition: translate 0.2s, box-shadow 0.2s;
+}
+.team-plate.team-1 {
+  --team: var(--team-1);
+}
+.team-plate.active {
+  border-color: var(--team);
+  translate: 0 -2px;
+  box-shadow: 0 6px 0 color-mix(in srgb, var(--team) 25%, transparent);
+}
+.plate-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.team-plate .team-name {
+  font-weight: 700;
+  color: var(--team);
+}
+.plate-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  background: var(--team);
+  color: #fff8ef;
+}
+.team-score {
+  grid-row: span 2;
+  font-family: var(--display);
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  animation: score-bump 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+@keyframes score-bump {
+  from {
+    scale: 1.5;
+    color: var(--team);
+  }
+}
+.plate-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+}
+.member {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  min-width: 0;
+}
+.member .avatar {
+  box-shadow: none;
+}
+.member .avatar.speaking {
+  box-shadow: 0 0 0 2px #fbf8f2, 0 0 0 4px var(--team);
+}
+.member-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 9ch;
+}
+
+/* Setup and "ready" stage */
+.tabu-stage {
+  --team: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  padding: 1.5rem 1rem;
+  border-radius: 14px;
+  background: var(--paper-2);
+}
+.tabu-stage.team-0 {
+  --team: var(--team-0);
+}
+.tabu-stage.team-1 {
+  --team: var(--team-1);
+}
+.stage-round {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--team);
+}
+.stage-avatar {
+  box-shadow: 0 0 0 4px var(--paper-2), 0 0 0 7px var(--team);
+  animation: pop-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+}
+.tabu-stage h3 {
+  font-size: 1.6rem;
+  margin: 0;
+}
+.stage-lead {
+  max-width: 34ch;
+}
+.stage-actions {
+  width: 100%;
+  max-width: 420px;
+}
+@keyframes pop-in {
+  from {
+    scale: 0.6;
+    opacity: 0;
+  }
+}
+
+/* Timer */
+.turn-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+.turn-meta {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  line-height: 1.3;
+}
+.turn-meta strong {
+  color: var(--ink);
+}
+.turn-meta.right {
+  text-align: right;
+}
+.timer-ring {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+}
+.timer-ring svg {
+  position: absolute;
+  inset: 0;
+  rotate: -90deg;
+}
+.ring-track {
+  fill: #fbf8f2;
+  stroke: var(--paper-3);
+  stroke-width: 6;
+}
+.ring-fill {
+  fill: none;
+  stroke: var(--go);
+  stroke-width: 6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.9s linear, stroke 0.3s;
+}
+.timer-ring span {
+  position: relative;
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.timer-ring.low .ring-fill {
+  stroke: var(--stop);
+}
+.timer-ring.low span {
+  color: var(--stop);
+  animation: tick-pulse 0.5s ease-out;
+}
+@keyframes tick-pulse {
+  from {
+    scale: 1.35;
+  }
+}
+
+/* Card */
+.card-table {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0.5rem 0 0.75rem;
+  perspective: 900px;
+}
+/* Two cards of the deck lying under the current one. */
+.card-table::before,
+.card-table::after {
+  content: "";
+  position: absolute;
+  width: min(100%, 330px);
+  height: calc(100% - 1.25rem);
+  border-radius: 16px;
+  background: #efe6d4;
+  border: 1.5px solid var(--rule);
+}
+.card-table::before {
+  rotate: -4deg;
+  translate: -6px 4px;
+}
+.card-table::after {
+  rotate: 3deg;
+  translate: 6px 6px;
+}
+.tabu-card {
+  --team: var(--team-0);
+  position: relative;
+  z-index: 1;
+  width: min(100%, 330px);
+  border-radius: 16px;
+  background: #fffdf8;
+  border: 1.5px solid #d5c8b0;
+  box-shadow: 0 14px 26px -12px rgb(35 32 27 / 0.45);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  animation: deal-in 0.42s cubic-bezier(0.2, 0.85, 0.3, 1.15);
+}
+.tabu-card.team-1 {
+  --team: var(--team-1);
+}
+@keyframes deal-in {
+  from {
+    translate: 70% -10px;
+    rotate: 14deg;
+    opacity: 0;
+  }
+}
+.tabu-word {
+  border-radius: 9px;
+  background: var(--team);
+  color: #fff8ef;
+  font-family: var(--display);
+  font-size: clamp(1.7rem, 8vw, 2.2rem);
+  font-weight: 800;
+  text-align: center;
+  padding: 1.1rem 0.75rem;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  box-shadow: inset 0 -4px 0 rgb(0 0 0 / 0.15);
+}
+.taboo-label {
+  margin: 0.8rem 0 0.2rem;
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink-soft);
+}
+.tabu-card ul {
+  list-style: none;
+  margin: 0;
+  padding: 0 0.5rem 0.4rem;
+  text-align: center;
+}
+.tabu-card li {
+  padding: 0.45rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  border-bottom: 1px solid #ece3d2;
+}
+.tabu-card li:last-child {
+  border-bottom: 0;
+}
+.tabu-card.back {
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 300px;
+  text-align: center;
+  padding: 1.5rem;
+  color: #fff8ef;
+  border: 8px solid #fffdf8;
+  background:
+    repeating-linear-gradient(45deg, rgb(255 255 255 / 0.07) 0 6px, transparent 6px 12px),
+    repeating-linear-gradient(-45deg, rgb(0 0 0 / 0.06) 0 6px, transparent 6px 12px),
+    var(--accent);
+}
+.back-mark {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 2.6rem;
+  letter-spacing: 0.12em;
+  padding: 0.2rem 0.8rem;
+  border: 3px solid #fff8ef;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  rotate: -6deg;
+}
+.tabu-card.back strong {
+  font-family: var(--display);
+  font-size: 1.5rem;
+}
+.tabu-card.back span:last-child {
+  opacity: 0.85;
+  max-width: 24ch;
+}
+
+.tabu-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 0.6rem;
+  align-items: end;
+}
+.tabu-actions button {
+  min-height: 56px;
+}
+.tabu-actions button.big {
+  min-height: 64px;
+  font-size: 1.3rem;
+}
+
+.tabu-log {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.tabu-log li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: var(--paper-2);
+  animation: pop-in 0.3s ease-out;
+}
+.tabu-log li span {
+  font-weight: 400;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+}
+.tabu-log li.correct {
+  background: #dcebdf;
+  color: var(--go);
+}
+.tabu-log li.taboo {
+  background: #f3d9d2;
+  color: var(--stop);
+  text-decoration: line-through;
+}
+.tabu-log li.pass {
+  color: var(--ink-soft);
+}
+
+.tabu-result {
+  --team: var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1.75rem 1rem;
+  border-radius: 14px;
+  background: var(--team);
+  color: #fff8ef;
+  text-align: center;
+  animation: pop-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.tabu-result.team-0 {
+  --team: var(--team-0);
+}
+.tabu-result.team-1 {
+  --team: var(--team-1);
+}
+.tabu-result h2 {
+  font-size: 2rem;
+  margin: 0;
+}
+.result-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+.result-score {
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 420px) {
+  .team-plate {
+    padding: 0.55rem 0.6rem;
+  }
+  .team-score {
+    font-size: 1.8rem;
+  }
+  .member-name {
+    display: none;
+  }
+}
