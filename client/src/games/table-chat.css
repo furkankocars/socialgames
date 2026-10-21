@@ -190,3 +190,70 @@
     padding: 2px;
   }
 }
+
+/* A chat line in a speech bubble above the writer's seat on the felt. */
+.seat-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  width: max-content;
+  max-width: min(170px, 40vw);
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  background: #fbf6e9;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+  animation: bubble-in 0.25s ease-out;
+}
+.bubble-text {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.seat-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 7px solid transparent;
+  border-top-color: #fbf6e9;
+}
+/* Side seats sit at the felt's edge, so their bubbles open toward the middle. */
+.seat.left .seat-bubble {
+  left: -4px;
+  translate: none;
+}
+.seat.left .seat-bubble::after {
+  left: 29px;
+}
+.seat.right .seat-bubble {
+  left: auto;
+  right: -4px;
+  translate: none;
+}
+.seat.right .seat-bubble::after {
+  left: auto;
+  right: 15px;
+  translate: none;
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat-bubble {
+    animation: none;
+  }
+}

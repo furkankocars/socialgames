@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Tile, TileColor } from "../../shared/games/okey.js";
-import { analyzeGroup, bestGroups } from "../../shared/games/okey-rules.js";
+import { analyzeGroup, autoLay, bestGroups, bestPairs, isPair } from "../../shared/games/okey-rules.js";
 import { createTiles, dealSetup } from "../src/games/okey/tiles.js";
 import { seeded } from "./helpers.js";
 
@@ -48,5 +48,51 @@ describe("bestGroups", () => {
     }
     expect(Date.now() - started).toBeLessThan(3000);
     expect(createTiles()).toHaveLength(106);
+  });
+});
+
+describe("auto open (101)", () => {
+  it("pairs okeys with loose tiles", () => {
+    const hand = [t("red", 3), t("red", 3), t("blue", 9), t("black", 7), t("yellow", 2)];
+    const pairs = bestPairs(hand, okey);
+    expect(pairs).toHaveLength(2);
+    pairs.forEach((p) => expect(isPair(p, okey)).toBe(true));
+  });
+
+  it("only opens with groups the server accepts, and keeps a tile to discard", () => {
+    const random = seeded(23);
+    let opened = 0;
+    for (let i = 0; i < 60; i++) {
+      const { tiles, okey: o } = dealSetup(random);
+      const hand = tiles.slice(0, 22);
+      const result = autoLay(hand, o, null);
+      if (!result.groups) {
+        expect(result.points).toBeLessThan(101);
+        continue;
+      }
+      opened++;
+      const byId = new Map(hand.map((x) => [x.id, x]));
+      const groups = result.groups.map((g) => g.map((id) => byId.get(id)!));
+      expect(groups.flat().length).toBeLessThan(hand.length);
+      if (result.how === "pairs") groups.forEach((g) => expect(isPair(g, o)).toBe(true));
+      else expect(groups.reduce((n, g) => n + analyzeGroup(g, o)!.points, 0)).toBeGreaterThanOrEqual(101);
+    }
+    expect(opened).toBeGreaterThan(0);
+  });
+});
+
+describe("12-13-1", () => {
+  it("is a run in normal okey but not in 101", () => {
+    const run = [t("red", 12), t("red", 13), t("red", 1)];
+    expect(analyzeGroup(run, okey)).toBeNull();
+    expect(analyzeGroup(run, okey, true)!.points).toBe(26);
+    expect(bestGroups(run, okey).groups).toHaveLength(0);
+    expect(bestGroups(run, okey, true).groups).toHaveLength(1);
+  });
+
+  it("an okey can't stand in for the 1 after 13 in 101", () => {
+    const run = [t("blue", 12), t("blue", 13), t("black", 7)];
+    // Only as 11-12-13.
+    expect(analyzeGroup(run, okey)!.points).toBe(36);
   });
 });
