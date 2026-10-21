@@ -4,6 +4,8 @@ import { request } from "./socket";
 import { useAct, useToast } from "./toast";
 import { Toggle } from "./Toggle";
 import { setColorblind, useColorblind } from "./prefs";
+import { Avatar } from "./Avatar";
+import { GameEmblem } from "./GameEmblem";
 
 type Values = Record<string, number>;
 
@@ -33,12 +35,44 @@ const TURN_TIME: Option = {
   initial: 0,
 };
 
+const ESLI: Option = {
+  key: "esli",
+  label: "Eşli",
+  toggle: true,
+  choices: ON_OFF,
+  initial: 0,
+  hint: (v) => (v.esli ? "Karşılıklı oturanlar eş olur: listede 1. ile 3., 2. ile 4. sıradakiler. Puan takım olarak sayılır." : "Herkes kendi adına oynar."),
+};
+
 const OPTIONS: Record<GameId, Option[]> = {
   tabu: [
     { key: "roundSeconds", label: "Tur süresi", choices: nums([45, 60, 90, 120], " sn"), initial: 60 },
     { key: "rounds", label: "Tur sayısı (her takım)", choices: nums([1, 2, 3, 4, 5, 6]), initial: 3 },
+    {
+      key: "passes",
+      label: "Pas hakkı (her tur)",
+      choices: [...nums([0, 3, 5]), { value: -1, label: "Sınırsız" }],
+      initial: 3,
+      hint: "Pas puan kaybettirmez; kart değişir.",
+    },
   ],
-  vampir: [],
+  vampir: [
+    {
+      key: "dayMinutes",
+      label: "Gündüz süresi",
+      choices: [{ value: 0, label: "Süresiz" }, ...nums([1, 2, 3, 5], " dk")],
+      initial: 3,
+      hint: (v) => (v.dayMinutes ? "Süre bitince verilen oylar sayılır; oy vermeyen çekimser kalır." : "Gün, herkes oy verince biter."),
+    },
+    {
+      key: "reveal",
+      label: "Ölenin rolü açıklansın",
+      toggle: true,
+      choices: ON_OFF,
+      initial: 1,
+      hint: (v) => (v.reveal ? "Ölen ya da asılan herkesin rolü köye duyurulur." : "Roller oyun sonuna kadar gizli kalır; tartışma zorlaşır."),
+    },
+  ],
   okey: [
     {
       key: "katlamali",
@@ -63,9 +97,10 @@ const OPTIONS: Record<GameId, Option[]> = {
       initial: 1,
       hint: (v) => `Göstergenin eşini ilk turunda gösteren ${v.katlamali ? "diğerlerine 1 puan kaybettirir" : "1 puan alır"}.`,
     },
+    ESLI,
     TURN_TIME,
   ],
-  okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, TURN_TIME],
+  okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, ESLI, TURN_TIME],
   chess: [
     {
       key: "minutes",
@@ -158,60 +193,90 @@ export function Lobby({ room }: { room: RoomView }) {
     act(request("room:start", { options: values }));
   };
 
+  // Seats this game wants filled, so empty ones can be shown and given a bot.
+  const seatsWanted = selected.playerCounts
+    ? (selected.playerCounts.find((n) => n >= room.players.length) ?? Math.max(...selected.playerCounts))
+    : selected.minPlayers === selected.maxPlayers
+      ? selected.maxPlayers
+      : Math.max(selected.minPlayers, room.players.length);
+  const emptySeats = Math.max(0, seatsWanted - room.players.length);
+  const canStart = connected >= selected.minPlayers && connected <= selected.maxPlayers && !badCount;
+
   return (
     <div className="lobby">
-      <section>
-        <h4>Oda kodu</h4>
-        <div className="code-display">{room.code}</div>
-        <button onClick={share}>Davet linkini paylaş</button>
+      <section className="lobby-seats">
+        <div className="invite">
+          <span className="invite-label">Oda kodu</span>
+          <span className="code-display" data-room-code>
+            {room.code}
+          </span>
+          <button onClick={share}>Davet linkini paylaş</button>
+        </div>
 
-        <h4 style={{ marginTop: "2rem" }}>Masadakiler · {room.players.length}</h4>
-        <ul className="player-list">
+        <h2 className="lobby-h">
+          Masadakiler <span className="muted">{room.players.length}</span>
+        </h2>
+        <ul className="seat-list">
           {room.players.map((p) => (
             <li key={p.id} className={p.connected ? "" : "offline"}>
-              <span className={`dot ${p.connected ? "on" : ""}`} title={p.connected ? "Bağlı" : "Bağlantı koptu"} />
-              <span className="grow">
-                {p.name}
-                {p.id === room.you && <span className="muted"> (sen)</span>}
+              <Avatar id={p.id} name={p.name} size={36} />
+              <span className="grow seat-who">
+                <span>
+                  {p.name}
+                  {p.id === room.you && <span className="muted"> (sen)</span>}
+                </span>
+                <span className="small muted">
+                  {[p.id === room.hostId && "oda sahibi", p.bot && "bot", !p.connected && "bağlantı koptu"].filter(Boolean).join(" · ") || "hazır"}
+                </span>
               </span>
-              {p.bot && <span className="tag">bot</span>}
-              {p.id === room.hostId && <span className="tag">oda sahibi</span>}
               {isHost && p.id !== room.you && (
                 <button
                   className="ghost small"
                   onClick={() => (p.bot || confirm(`${p.name} odadan çıkarılsın mı?`)) && act(request("room:kick", { playerId: p.id }))}
                 >
-                  Çıkar
+                  Kaldır
+                </button>
+              )}
+            </li>
+          ))}
+          {Array.from({ length: emptySeats }, (_, i) => (
+            <li key={`empty-${i}`} className="empty-seat">
+              <span className="seat-hole" aria-hidden />
+              <span className="grow muted">Boş koltuk</span>
+              {isHost && selected.bots && (
+                <button className="small" onClick={() => act(request("room:addBot"))}>
+                  Bot oturt
                 </button>
               )}
             </li>
           ))}
         </ul>
-        {isHost && selected.bots && connected < selected.maxPlayers && (
-          <div className="bot-add">
-            <button className="ghost" onClick={() => act(request("room:addBot"))}>
-              Bot ekle
-            </button>
-            <span className="small muted">Eksik koltuklarda bot oynar.</span>
-          </div>
+        {isHost && selected.bots && emptySeats === 0 && connected < selected.maxPlayers && (
+          <button className="ghost small bot-more" onClick={() => act(request("room:addBot"))}>
+            Bir bot daha ekle
+          </button>
         )}
+        {!selected.bots && <p className="small muted seat-note">{selected.name} botla oynanmaz; arkadaşlarını çağır.</p>}
       </section>
 
-      <section>
-        <h4>Ne oynuyoruz?</h4>
+      <section className="lobby-game">
+        <h2 className="lobby-h">Ne oynuyoruz?</h2>
         <ul className="game-choices">
           {GAMES.map((g) => (
             <li key={g.id}>
               <button
                 className={`game-choice ${g.id === room.selectedGame ? "selected" : ""}`}
-                disabled={!isHost}
+                disabled={!isHost && g.id !== room.selectedGame}
                 aria-pressed={g.id === room.selectedGame}
-                onClick={() => act(request("room:selectGame", { gameId: g.id }))}
+                data-game={g.id}
+                onClick={() => isHost && act(request("room:selectGame", { gameId: g.id }))}
               >
-                <span className="radio" />
-                <strong>{g.name}</strong>
-                <span className="small muted">{playerCountLabel(g)}</span>
-                <span className="desc">{g.description}</span>
+                <GameEmblem game={g.id} size={44} />
+                <span className="choice-text">
+                  <strong>{g.name}</strong>
+                  <span className="desc">{g.description}</span>
+                </span>
+                <span className="choice-count">{playerCountLabel(g)}</span>
               </button>
             </li>
           ))}
@@ -219,7 +284,7 @@ export function Lobby({ room }: { room: RoomView }) {
 
         {isHost && options.length > 0 && (
           <div className="options">
-            <h4>Ayarlar</h4>
+            <h3 className="options-h">Masa ayarları</h3>
             {options
               .filter((o) => !o.when || o.when(values))
               .map((o) => {
@@ -232,13 +297,14 @@ export function Lobby({ room }: { room: RoomView }) {
                   );
                 }
                 return (
-                  <div key={o.key} className="setting" role="group" aria-label={o.label}>
+                  <div key={o.key} className="setting" role="radiogroup" aria-label={o.label}>
                     <span className="setting-label">{o.label}</span>
                     <div className="segmented">
                       {o.choices.map((c) => (
-                        <button key={c.value} type="button" aria-pressed={values[o.key] === c.value} onClick={() => setValue(o.key, c.value)}>
+                        <label key={c.value}>
+                          <input type="radio" name={o.key} checked={values[o.key] === c.value} onChange={() => setValue(o.key, c.value)} />
                           {c.label}
-                        </button>
+                        </label>
                       ))}
                     </div>
                     {hint && <span className="muted small">{hint}</span>}
@@ -250,7 +316,7 @@ export function Lobby({ room }: { room: RoomView }) {
 
         {isOkey && (
           <div className="options">
-            <h4>Senin ekranın</h4>
+            <h3 className="options-h">Senin ekranın</h3>
             <div className="setting">
               <Toggle
                 on={colorblind}
@@ -262,19 +328,26 @@ export function Lobby({ room }: { room: RoomView }) {
           </div>
         )}
 
-        {isHost ? (
-          <button className="primary wide" onClick={start} disabled={connected < selected.minPlayers || connected > selected.maxPlayers || badCount}>
-            {connected < selected.minPlayers
-              ? `${selected.minPlayers - connected} oyuncu daha gerekli`
-              : connected > selected.maxPlayers
-                ? `En fazla ${selected.maxPlayers} kişi`
-                : badCount
-                  ? `${playerCountLabel(selected)} gerekli`
-                  : `${selected.name} başlat`}
-          </button>
-        ) : (
-          <p className="muted">Oyunu oda sahibi seçip başlatacak.</p>
-        )}
+        <div className="start-bar">
+          {isHost ? (
+            <>
+              <span className="start-note">
+                {connected < selected.minPlayers
+                  ? `${selected.minPlayers - connected} oyuncu daha gerekli`
+                  : connected > selected.maxPlayers
+                    ? `En fazla ${selected.maxPlayers} kişi oynar`
+                    : badCount
+                      ? `${playerCountLabel(selected)} gerekli`
+                      : `${connected} kişi hazır`}
+              </span>
+              <button className="primary big" data-start onClick={start} disabled={!canStart}>
+                {selected.name} başlasın
+              </button>
+            </>
+          ) : (
+            <span className="start-note">Oyunu oda sahibi seçip başlatacak.</span>
+          )}
+        </div>
       </section>
     </div>
   );

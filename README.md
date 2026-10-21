@@ -13,12 +13,14 @@ Arkadaş grubuyla tarayıcıdan oynanan masa ve grup oyunları. Biri oda açar, 
 
 | Oyun | Oyuncu | Bot | Kısaca |
 | --- | --- | --- | --- |
-| Tabu | 4-16 | Yok | İki takım. Anlatıcı ve rakip takım kartı görür, anlatıcının takımı tahmin eder. Doğru +1, Tabu -1, tur başına 3 pas. |
-| Vampir Köylü | 4-16 | Var | Her 4 kişiye 1 vampir, 1 gözcü, 5 ve üzeri kişide 1 doktor. Gece vampirler ısırır, doktor korur, gözcü bakar; gündüz köy oylar. |
+| Tabu | 4-16 | Yok | İki takım. Anlatıcı ve rakip takım kartı görür, anlatıcının takımı tahmin eder. Doğru +1, Tabu -1. Pas hakkı (0, 3, 5 ya da sınırsız), tur süresi ve tur sayısı lobide seçilir. |
+| Vampir Köylü | 4-16 | Var | Her 4 kişiye 1 vampir, 1 gözcü, 5 ve üzeri kişide 1 doktor. Gece vampirler ısırır, doktor korur, gözcü bakar; gündüz köy oylar. Doktor aynı kişiyi iki gece üst üste koruyamaz. İsteğe bağlı gündüz süresi; ölenin rolü açıklanabilir ya da gizli kalır. |
 | Okey | 4 | Var | 106 taş, gösterge ve okey. Seri ya da per ile, veya 7 çiftle bitir. Normal bitiş +2, çiftten ya da okey atarak bitiş +4. Normal ya da katlamalı oynanır. |
 | 101 Okey | 4 | Var | 101 sayıyla ya da 5 çiftle el aç, masadaki gruplara işle. Yandan alınan taş o el kullanılmalı. Bitiren -101, açamayan 202 ceza alır. Çiftten ya da okeyle bitişte cezalar iki katı. Az puan kazanır. |
-| Satranç | 2 | Var | Tam kurallar: rok, geçerken alma, terfi, mat, pat, üç tekrar, 50 hamle, yetersiz taş. Satranç saati, hamle başı ek süre, beraberlik teklifi, renk değiştiren rövanş. Kolay, orta ve zor bot. |
+| Satranç | 2 | Var | Tam kurallar: rok, geçerken alma, terfi, mat, pat, üç tekrar, 50 hamle, yetersiz taş. Satranç saati, hamle başı ek süre, beraberlik teklifi, renk değiştiren rövanş. Hamle listesinden ya da ok tuşlarıyla geçmiş konumlara dönülür. Kolay, orta ve zor bot. |
 | Pişti | 2 ya da 4 | Var | Yerdeki üst kartla aynı kartı ya da vale atan yerdeki kartları alır. Tek karta aynısı pişti (10), valeye vale 20. El sonunda kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1. 4 kişide eşli oynanabilir. |
+
+Her oyun ekranında masa solda, yanında (telefonda altında) sekmeler durur: oyunun kendi paneli (puanlar, hamleler, köy defteri ya da tur kaydı), masa sohbeti ve o oyunun kuralları.
 
 <p>
   <img src="docs/ekran/tabu-anlatici-mobil.jpg" alt="Tabu, anlatıcı ekranı" width="23%">

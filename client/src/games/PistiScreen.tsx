@@ -8,7 +8,8 @@ import { nameOf, useCountdown } from "../hooks";
 import { Avatar } from "../Avatar";
 import { chime, clack, success, tick } from "../sound";
 import { pointerDrag } from "../drag";
-import { TableChat, TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
+import { TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
+import { GameLayout } from "../GameLayout";
 
 const SUIT_NAMES: Record<Suit, string> = { spades: "maça", hearts: "kupa", diamonds: "karo", clubs: "sinek" };
 const RED: Suit[] = ["hearts", "diamonds"];
@@ -186,6 +187,9 @@ export function PistiScreen({ room }: { room: RoomView }) {
       <div key={s.id} className={`pseat ${area} ${turn ? "turn" : ""}`} data-treat={s.id}>
         <span className="pseat-avatar">
           <Avatar id={s.id} name={name} size={area === "me" ? 36 : 44} />
+          {turn && turnEndsAt && g.turnSeconds > 0 && (
+            <span className={`turn-ring ${secondsLeft <= 5 ? "low" : ""}`} style={{ ["--left" as string]: secondsLeft / g.turnSeconds }} />
+          )}
           {g.dealer === index && <span className="pdealer" title="Dağıtan">D</span>}
           {treat && (
             <span key={treat} className="seat-treat">
@@ -223,7 +227,7 @@ export function PistiScreen({ room }: { room: RoomView }) {
         : "Sıra sende: kartını yere sürükle."
       : `${nameOf(room, g.seats[g.turn].id)} oynuyor…`;
 
-  return (
+  const stage = (
     <div className="pisti" data-drag-layer>
       <div className="pisti-hud">
         <span className="hud-item">
@@ -347,31 +351,32 @@ export function PistiScreen({ room }: { room: RoomView }) {
         </div>
       )}
 
-      <TableChat room={room} />
-
-      <div className="card">
-        <h4>Puanlar <span className="muted small">({g.target} sayıya)</span></h4>
-        <table className="scores">
-          <tbody>
-            {g.sides.map((side, i) => (
-              <tr key={i} className={side.seats.includes(g.mySeat) ? "me" : ""}>
-                <td>
-                  {g.teams && <span className={`team-dot t${i}`} />}
-                  {sideName(i)}
-                </td>
-                <td className="muted">{side.captured} kart · {side.pistis} pişti</td>
-                <td>{side.score}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <p className="muted small pisti-rules">
-          Yerdeki üst kartla aynı kartı atan ya da vale atan yerdeki bütün kartları alır. Yerde tek kart varken aynısını atmak pişti (10), valeye vale pişti (20).
-          El sonunda kartların çoğunu alan 3, karo 10 3, sinek 2 2, her as ve vale 1 sayı alır.
-        </p>
-      </div>
     </div>
   );
+
+  const scores = (
+    <div className="card">
+      <p className="muted small panel-note">Oyun {g.target} sayıya; o sayıya ulaşılan elin sonunda biter.</p>
+      <table className="scores">
+        <tbody>
+          {g.sides.map((side, i) => (
+            <tr key={i} className={side.seats.includes(g.mySeat) ? "me" : ""}>
+              <td>
+                {g.teams && <span className={`team-dot t${i}`} />}
+                {sideName(i)}
+              </td>
+              <td className="muted">
+                {side.captured} kart · {side.pistis} pişti
+              </td>
+              <td>{side.score}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
+  return <GameLayout room={room} stage={stage} panels={[{ id: "scores", label: "Puanlar", content: scores }]} />;
 }
 
 function winnerSide(g: PistiView) {

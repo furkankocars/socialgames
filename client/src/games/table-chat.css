@@ -2,19 +2,31 @@
  * Table chat: a ruled paper log like a kahvehane order pad, with drawn drinks
  * that can be sent to one player or the whole table.
  */
+.table-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  flex: 1;
+}
 .chat-log {
   list-style: none;
-  margin: 0.25rem 0 0.6rem;
+  margin: 0;
   padding: 0;
-  max-height: 190px;
+  max-height: 260px;
   overflow-y: auto;
-  border-bottom: 1px solid var(--rule);
+  flex: 1 1 auto;
+}
+.side-chat .chat-log {
+  max-height: none;
+  min-height: 0;
 }
 .chat-line {
   padding: 0.35rem 0;
   border-top: 1px dashed var(--rule);
   line-height: 1.35;
   overflow-wrap: anywhere;
+  font-size: 0.95rem;
 }
 .chat-line:first-child {
   border-top: 0;
@@ -42,31 +54,31 @@
 
 .treat-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  align-items: center;
+  gap: 0.3rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--rule);
 }
-.treat-to {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin-right: 0.25rem;
+select.treat-to {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.9rem;
 }
-.treat-to select,
 .chat-form input {
-  border: 1.5px solid var(--ink);
-  border-radius: 6px;
-  background: var(--paper);
-  padding: 0.45rem 0.6rem;
+  padding: 0.5rem 0.65rem;
 }
 .treat-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.7rem 0.4rem 0.5rem;
-  border-color: var(--wood-dark);
-  font-weight: 600;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border-color: var(--rule);
+  background: var(--tile);
 }
 
 .chat-form {
@@ -137,7 +149,7 @@
   border-radius: 50%;
   background: #fbf6e9;
   box-shadow: 0 2px 4px rgb(0 0 0 / 0.35);
-  animation: treat-arrive 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+  animation: treat-arrive 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 @keyframes treat-arrive {
   from {
@@ -153,9 +165,6 @@
 }
 .treat-btn {
   touch-action: none;
-}
-.table-chat .hint {
-  margin: 0 0 0.5rem;
 }
 .drag-ghost.treat-icon {
   width: 34px !important;
@@ -188,5 +197,72 @@
   }
   .tray-btn {
     padding: 2px;
+  }
+}
+
+/* A chat line in a speech bubble above the writer's seat on the felt. */
+.seat-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 3;
+  width: max-content;
+  max-width: min(170px, 40vw);
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  background: #fbf6e9;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+  animation: bubble-in 0.25s ease-out;
+}
+.bubble-text {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.seat-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 7px solid transparent;
+  border-top-color: #fbf6e9;
+}
+/* Side seats sit at the felt's edge, so their bubbles open toward the middle. */
+.seat.left .seat-bubble {
+  left: -4px;
+  translate: none;
+}
+.seat.left .seat-bubble::after {
+  left: 29px;
+}
+.seat.right .seat-bubble {
+  left: auto;
+  right: -4px;
+  translate: none;
+}
+.seat.right .seat-bubble::after {
+  left: auto;
+  right: 15px;
+  translate: none;
+}
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    scale: 0.85;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seat-bubble {
+    animation: none;
   }
 }

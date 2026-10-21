@@ -192,7 +192,7 @@
   box-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
 }
 .discard-pile .tile {
-  animation: tile-drop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  animation: tile-drop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 .tile-ghost {
   width: var(--tile-w);
@@ -484,7 +484,7 @@
     0 10px 12px rgb(0 0 0 / 0.4);
 }
 .tile.fresh {
-  animation: tile-arrive 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  animation: tile-arrive 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 @keyframes tile-arrive {
   from {
@@ -733,4 +733,36 @@ button.wood:active:not(:disabled) {
   font-style: normal;
   font-weight: 700;
   color: var(--go);
+}
+
+@media (max-width: 480px) {
+  /* Room for the drink tray: the okey's name says what the label would. */
+  .okey-hud .hud-item:last-child .hud-label {
+    display: none;
+  }
+  .okey-hud .hud-item {
+    white-space: nowrap;
+  }
+}
+
+/* A tile turned over on your own rack: the plain back, like the center stack. */
+.tile.face-down {
+  background:
+    radial-gradient(circle at 50% 50%, transparent 26%, rgb(0 0 0 / 0.07) 28%, transparent 31%),
+    linear-gradient(160deg, #f6eedb, #ddcfae);
+}
+
+/* Eşli: team totals on top, each player's share below in smaller type. */
+.scores.teams td {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.scores.players {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.seat-tag.partner {
+  background: #f0c75e;
+  color: var(--ink);
 }

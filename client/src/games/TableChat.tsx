@@ -144,8 +144,7 @@ export function TableChat({ room }: { room: RoomView }) {
   };
 
   return (
-    <div className="card table-chat">
-      <h4>Masa sohbeti</h4>
+    <div className="table-chat">
       <ol className="chat-log" ref={log}>
         {room.chat.length === 0 && <li className="chat-line muted">Henüz kimse bir şey yazmadı. Bir çay ısmarlayarak başla.</li>}
         {room.chat.map((c) => (
@@ -153,31 +152,27 @@ export function TableChat({ room }: { room: RoomView }) {
         ))}
       </ol>
       <div className="treat-row">
-        <label className="treat-to">
-          <span className="hud-label">Ismarla</span>
-          <select value={to} onChange={(e) => setTo(e.target.value)}>
-            <option value="">Bütün masaya</option>
-            {others.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select className="treat-to" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Kime ısmarlansın">
+          <option value="">Bütün masaya</option>
+          {others.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         {TREATS.map((t) => (
           <button
             key={t.id}
             className="treat-btn"
             onClick={() => act(request("room:chat", { treat: t.id, to: to || null }))}
             onPointerDown={dragTreat(act, t.id)}
-            title={`${t.name} ısmarla`}
+            title={`${t.name} ısmarla. Bir oyuncunun üstüne sürüklersen ona gider.`}
+            aria-label={`${t.name} ısmarla`}
           >
-            <TreatIcon treat={t.id} />
-            {t.name}
+            <TreatIcon treat={t.id} size={24} />
           </button>
         ))}
       </div>
-      <p className="muted small hint">Bardağı masadaki bir oyuncunun üstüne sürükle, ona gitsin; masanın ortasına bırakırsan herkese.</p>
       <form
         className="chat-form"
         onSubmit={(e) => {
@@ -185,7 +180,7 @@ export function TableChat({ room }: { room: RoomView }) {
           void sendText();
         }}
       >
-        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={160} placeholder="Masaya bir şey yaz…" aria-label="Mesaj" />
+        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={160} placeholder="Masaya yaz…" aria-label="Mesaj" />
         <button type="submit" className="primary" disabled={!text.trim()}>
           Gönder
         </button>
@@ -194,29 +189,43 @@ export function TableChat({ room }: { room: RoomView }) {
   );
 }
 
+/** How long a chat line stays in a bubble over the writer's seat. */
+export const BUBBLE_SHOW_MS = 6000;
+
 /**
- * The drink to show on each seat: one sent to that player (or the whole table)
- * in the last few seconds. Timed by arrival on this device, not the server clock.
+ * What to show on each seat: a drink sent to that player (or the whole table)
+ * and the line they last wrote, each for a few seconds. Timed by arrival on
+ * this device, not the server clock.
  */
-export function useSeatTreats(room: RoomView): (playerId: string) => Treat | null {
+export function useSeatChat(room: RoomView): { treat: (playerId: string) => Treat | null; bubble: (playerId: string) => ChatEntry | null } {
   const [now, setNow] = useState(Date.now());
   const arrived = useRef<Map<number, number> | null>(null);
   if (!arrived.current) arrived.current = new Map(room.chat.map((c) => [c.id, 0]));
   const seen = arrived.current;
   for (const c of room.chat) if (!seen.has(c.id)) seen.set(c.id, Date.now());
 
-  const latest = room.chat.filter((c) => c.treat).at(-1)?.id;
+  const latest = room.chat.at(-1)?.id;
   useEffect(() => {
     if (latest === undefined) return;
     setNow(Date.now());
-    const t = setTimeout(() => setNow(Date.now()), TREAT_SHOW_MS + 50);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => setNow(Date.now()), Math.max(TREAT_SHOW_MS, BUBBLE_SHOW_MS) + 50);
+    const b = setTimeout(() => setNow(Date.now()), BUBBLE_SHOW_MS + 50);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(b);
+    };
   }, [latest]);
 
-  return (playerId) => {
-    const hit = [...room.chat].reverse().find(
-      (c) => c.treat && now - (seen.get(c.id) ?? 0) < TREAT_SHOW_MS && (c.to === playerId || (c.to === null && c.from !== playerId)),
-    );
-    return hit?.treat ?? null;
+  const recent = (c: ChatEntry, ms: number) => now - (seen.get(c.id) ?? 0) < ms;
+  const newestFirst = [...room.chat].reverse();
+  return {
+    treat: (playerId) =>
+      newestFirst.find((c) => c.treat && recent(c, TREAT_SHOW_MS) && (c.to === playerId || (c.to === null && c.from !== playerId)))?.treat ?? null,
+    bubble: (playerId) => newestFirst.find((c) => c.text && c.from === playerId && recent(c, BUBBLE_SHOW_MS)) ?? null,
   };
+}
+
+/** The drink currently shown on each seat; for screens without chat bubbles. */
+export function useSeatTreats(room: RoomView): (playerId: string) => Treat | null {
+  return useSeatChat(room).treat;
 }

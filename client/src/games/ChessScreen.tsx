@@ -3,13 +3,17 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointer
 import type { RoomView } from "../../../shared/protocol";
 import {
   colorOf,
+  initialPosition,
   legalMoves,
+  makeMove,
   PIECE_NAMES,
   squareName,
   typeOf,
   type ChessAction,
   type ChessEnd,
+  type ChessMoveRecord,
   type ChessPlayerView,
+  type ChessPosition,
   type ChessView,
   type Color,
   type Promotion,
@@ -21,7 +25,8 @@ import { nameOf } from "../hooks";
 import { pointerDrag } from "../drag";
 import { chime, clack, success, tick } from "../sound";
 import { ChessPiece } from "./ChessPiece";
-import { TableChat, TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
+import { TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
+import { GameLayout } from "../GameLayout";
 
 const VALUE: Record<string, number> = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const START_COUNT: Record<string, number> = { p: 8, n: 2, b: 2, r: 2, q: 1 };
@@ -56,6 +61,24 @@ function capturedBy(board: string[]): Record<Color, string[]> {
   return { w: lost("b"), b: lost("w") };
 }
 
+function NavIcon({ d }: { d: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" className="nav-icon" aria-hidden>
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Every position of the game so far, from the start, for stepping back through it. */
+function replay(moves: ChessMoveRecord[]): ChessPosition[] {
+  const out = [initialPosition()];
+  for (const m of moves) {
+    const promo = /=([QRBN])/.exec(m.san)?.[1]?.toLowerCase() as Promotion | undefined;
+    out.push(makeMove(out[out.length - 1], { from: m.from, to: m.to, promotion: promo }));
+  }
+  return out;
+}
+
 export function ChessScreen({ room }: { room: RoomView }) {
   const g = room.game as ChessView;
   const act = useAct();
@@ -69,11 +92,31 @@ export function ChessScreen({ room }: { room: RoomView }) {
   const pickedUp = useRef(false);
   const treatFor = useSeatTreats(room);
 
-  const moves = useMemo(() => (myTurn ? legalMoves(g.position) : []), [g.position, myTurn]);
+  // Stepping back through the game, as on Lichess: null follows the live board.
+  const [ply, setPly] = useState<number | null>(null);
+  const history = useMemo(() => replay(g.moves), [g.moves]);
+  const reviewing = ply !== null && ply < g.moves.length;
+  const shown = reviewing ? history[ply] : g.position;
+  const goTo = (n: number) => setPly(n >= g.moves.length ? null : Math.max(0, n));
+  const at = reviewing ? ply : g.moves.length;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      if (e.key === "ArrowLeft") goTo(at - 1);
+      else if (e.key === "ArrowRight") goTo(at + 1);
+      else return;
+      e.preventDefault();
+    };
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  });
+
+  const moves = useMemo(() => (myTurn && !reviewing ? legalMoves(g.position) : []), [g.position, myTurn, reviewing]);
   const targets = useMemo(() => new Set(moves.filter((m) => m.from === selected).map((m) => m.to)), [moves, selected]);
   const movable = useMemo(() => new Set(moves.map((m) => m.from)), [moves]);
-  const last = g.moves.at(-1) ?? null;
-  const kingInCheck = g.check ? g.position.board.indexOf(g.position.turn === "w" ? "K" : "k") : -1;
+  const last = (reviewing ? g.moves[ply - 1] : g.moves.at(-1)) ?? null;
+  const shownCheck = reviewing ? last?.san.endsWith("+") || last?.san.endsWith("#") : g.check;
+  const kingInCheck = shownCheck ? shown.board.indexOf(shown.turn === "w" ? "K" : "k") : -1;
 
   // A new position clears any half-made move.
   useEffect(() => {
@@ -132,7 +175,7 @@ export function ChessScreen({ room }: { room: RoomView }) {
   };
 
   const clickSquare = (sq: number) => {
-    if (!myTurn || promoting) return;
+    if (!myTurn || promoting || reviewing) return;
     if (pickedUp.current) {
       pickedUp.current = false;
       return;
@@ -143,15 +186,10 @@ export function ChessScreen({ room }: { room: RoomView }) {
 
   /** Press a piece to pick it up; drag it onto a square to move it there. */
   const dragPiece = (sq: number) => (e: ReactPointerEvent<HTMLElement>) => {
-    if (!myTurn || !movable.has(sq) || promoting || e.button !== 0) return;
+    if (!myTurn || reviewing || !movable.has(sq) || promoting || e.button !== 0) return;
     pickedUp.current = selected !== sq;
     setSelected(sq);
-    pointerDrag(
-      e,
-      "[data-sq]",
-      (target) => tryMove(sq, Number(target.dataset.sq)),
-      e.currentTarget.querySelector<HTMLElement>(".piece") ?? e.currentTarget,
-    );
+    pointerDrag(e, "[data-sq]", (target) => tryMove(sq, Number(target.dataset.sq)), e.currentTarget.querySelector<HTMLElement>(".piece") ?? e.currentTarget);
   };
 
   const order = Array.from({ length: 64 }, (_, i) => {
@@ -228,7 +266,7 @@ export function ChessScreen({ room }: { room: RoomView }) {
     list.current?.scrollTo({ top: list.current.scrollHeight });
   }, [moveCount]);
 
-  return (
+  const stage = (
     <div className="chess" data-drag-layer>
       <div className="chess-hud">
         <span className="hud-item">
@@ -239,128 +277,158 @@ export function ChessScreen({ room }: { room: RoomView }) {
         <TreatTray />
       </div>
 
-      <div className="chess-layout">
-        <div className="chess-main">
-          {plate(top, "top")}
-          <div className="chess-table" data-treat="table">
-            <div className={`chess-board ${myTurn ? "live" : ""}`} role="grid" aria-label="Satranç tahtası">
-              {order.map((sq, i) => {
-                const piece = g.position.board[sq];
-                const light = (Math.floor(sq / 8) + (sq % 8)) % 2 === 1;
-                const classes = [
-                  "sq",
-                  light ? "light" : "dark",
-                  selected === sq ? "selected" : "",
-                  last && (last.from === sq || last.to === sq) ? "last" : "",
-                  sq === kingInCheck ? "check" : "",
-                  targets.has(sq) ? (piece || (typeOf(g.position.board[selected!] ?? "") === "p" && sq === g.position.ep) ? "capture" : "target") : "",
-                  movable.has(sq) ? "movable" : "",
-                ].filter(Boolean);
-                return (
-                  <div
-                    key={sq}
-                    className={classes.join(" ")}
-                    data-sq={sq}
-                    onClick={() => clickSquare(sq)}
-                    onPointerDown={piece ? dragPiece(sq) : undefined}
-                    aria-label={`${squareName(sq)}${piece ? ` ${colorOf(piece) === "w" ? "beyaz" : "siyah"} ${PIECE_NAMES[typeOf(piece)].toLocaleLowerCase("tr")}` : ""}`}
-                  >
-                    {i % 8 === 0 && <span className="coord rank">{Math.floor(sq / 8) + 1}</span>}
-                    {i >= 56 && <span className="coord file">{"abcdefgh"[sq % 8]}</span>}
-                    {piece && <ChessPiece piece={piece} />}
-                  </div>
-                );
-              })}
-
-              {promoting && (
-                <div className="promotion" role="group" aria-label="Piyon neye dönüşsün?">
-                  <span className="chess-label">Piyon neye dönüşsün?</span>
-                  <div className="promotion-choices">
-                    {(["q", "r", "b", "n"] as const).map((t) => (
-                      <button key={t} onClick={() => promote(t)} aria-label={{ q: "Vezir", r: "Kale", b: "Fil", n: "At" }[t]}>
-                        <ChessPiece piece={me === "w" ? t.toUpperCase() : t} />
-                      </button>
-                    ))}
-                  </div>
-                  <button className="ghost small" onClick={() => setPromoting(null)}>
-                    Vazgeç
-                  </button>
+      <div className="chess-main">
+        {plate(top, "top")}
+        <div className="chess-table" data-treat="table">
+          <div className={`chess-board ${myTurn && !reviewing ? "live" : ""} ${reviewing ? "past" : ""}`} role="grid" aria-label="Satranç tahtası">
+            {order.map((sq, i) => {
+              const piece = shown.board[sq];
+              const light = (Math.floor(sq / 8) + (sq % 8)) % 2 === 1;
+              const classes = [
+                "sq",
+                light ? "light" : "dark",
+                selected === sq ? "selected" : "",
+                last && (last.from === sq || last.to === sq) ? "last" : "",
+                sq === kingInCheck ? "check" : "",
+                targets.has(sq) ? (piece || (typeOf(g.position.board[selected!] ?? "") === "p" && sq === g.position.ep) ? "capture" : "target") : "",
+                movable.has(sq) ? "movable" : "",
+              ].filter(Boolean);
+              return (
+                <div
+                  key={sq}
+                  className={classes.join(" ")}
+                  data-sq={sq}
+                  onClick={() => clickSquare(sq)}
+                  onPointerDown={piece ? dragPiece(sq) : undefined}
+                  aria-label={`${squareName(sq)}${piece ? ` ${colorOf(piece) === "w" ? "beyaz" : "siyah"} ${PIECE_NAMES[typeOf(piece)].toLocaleLowerCase("tr")}` : ""}`}
+                >
+                  {i % 8 === 0 && <span className="coord rank">{Math.floor(sq / 8) + 1}</span>}
+                  {i >= 56 && <span className="coord file">{"abcdefgh"[sq % 8]}</span>}
+                  {piece && <ChessPiece piece={piece} />}
                 </div>
-              )}
+              );
+            })}
 
-              {g.result && (
-                <div className="chess-over">
-                  <div className="over-sheet">
-                    <h3>{status}</h3>
-                    <p>{END_TEXT[g.result.reason]}.</p>
-                    {room.hostId === room.you || room.players.find((p) => p.id === room.hostId)?.bot ? (
-                      <button className="primary chunky" onClick={() => send({ type: "rematch" })}>
-                        Rövanş, renkler değişsin
-                      </button>
-                    ) : (
-                      <p className="muted small">Oda sahibinin rövanşı başlatması bekleniyor…</p>
-                    )}
-                  </div>
+            {promoting && (
+              <div className="promotion" role="group" aria-label="Piyon neye dönüşsün?">
+                <span className="chess-label">Piyon neye dönüşsün?</span>
+                <div className="promotion-choices">
+                  {(["q", "r", "b", "n"] as const).map((t) => (
+                    <button key={t} onClick={() => promote(t)} aria-label={{ q: "Vezir", r: "Kale", b: "Fil", n: "At" }[t]}>
+                      <ChessPiece piece={me === "w" ? t.toUpperCase() : t} />
+                    </button>
+                  ))}
                 </div>
-              )}
-            </div>
+                <button className="ghost small" onClick={() => setPromoting(null)}>
+                  Vazgeç
+                </button>
+              </div>
+            )}
+
+            {g.result && (
+              <div className="chess-over">
+                <div className="over-sheet">
+                  <h3>{status}</h3>
+                  <p>{END_TEXT[g.result.reason]}.</p>
+                  {room.hostId === room.you || room.players.find((p) => p.id === room.hostId)?.bot ? (
+                    <button className="primary chunky" onClick={() => send({ type: "rematch" })}>
+                      Rövanş, renkler değişsin
+                    </button>
+                  ) : (
+                    <p className="muted small">Oda sahibinin rövanşı başlatması bekleniyor…</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          {plate(bottom, "bottom")}
         </div>
-
-        <aside className="chess-side">
-          <div className={`chess-status ${myTurn ? "mine" : ""} ${g.check && !g.result ? "check" : ""}`} role="status">
-            {status}
-          </div>
-
-          {opponentOffered && !g.result && (
-            <div className="draw-offer">
-              <span>Rakip beraberlik teklif ediyor.</span>
-              <span className="draw-buttons">
-                <button className="success small" onClick={() => send({ type: "answerDraw", accept: true })}>
-                  Kabul et
-                </button>
-                <button className="ghost small" onClick={() => send({ type: "answerDraw", accept: false })}>
-                  Reddet
-                </button>
-              </span>
-            </div>
-          )}
-
-          <div className="move-sheet">
-            <h4>Hamleler</h4>
-            <ol className="move-list" ref={list}>
-              {pairs.length === 0 && <li className="muted small empty">Henüz hamle yok. İlk hamle beyazın.</li>}
-              {pairs.map((p) => (
-                <li key={p.n}>
-                  <span className="move-n">{p.n}.</span>
-                  <span className={`move-san ${p.n * 2 - 1 === moveCount ? "latest" : ""}`}>{p.w}</span>
-                  <span className={`move-san ${p.n * 2 === moveCount ? "latest" : ""}`}>{p.b ?? ""}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          {me && !g.result && (
-            <div className="chess-actions">
-              <button
-                className="ghost"
-                disabled={g.drawOffer === me || moveCount < 2}
-                onClick={() => send({ type: "offerDraw" })}
-                title={moveCount < 2 ? "Önce birkaç hamle oynanmalı" : undefined}
-              >
-                {g.drawOffer === me ? "Teklif gönderildi" : "Beraberlik teklif et"}
-              </button>
-              <button className="danger" onClick={() => confirm("Pes etmek istediğine emin misin?") && send({ type: "resign" })}>
-                Pes et
-              </button>
-            </div>
-          )}
-          <p className="muted small hint">Taşı tutup gideceği kareye sürükle ya da önce taşa, sonra kareye dokun.</p>
-        </aside>
+        {plate(bottom, "bottom")}
       </div>
 
-      <TableChat room={room} />
+      {reviewing ? (
+        <div className="chess-status past" role="status">
+          <span>{ply === 0 ? "Başlangıç konumuna" : `${Math.ceil(ply / 2)}. hamleye`} bakıyorsun.</span>
+          <button className="small" onClick={() => setPly(null)}>
+            Canlıya dön
+          </button>
+        </div>
+      ) : (
+        <div className={`chess-status ${myTurn ? "mine" : ""} ${g.check && !g.result ? "check" : ""}`} role="status">
+          {status}
+        </div>
+      )}
+
+      {opponentOffered && !g.result && (
+        <div className="draw-offer">
+          <span>Rakip beraberlik teklif ediyor.</span>
+          <span className="draw-buttons">
+            <button className="success small" onClick={() => send({ type: "answerDraw", accept: true })}>
+              Kabul et
+            </button>
+            <button className="ghost small" onClick={() => send({ type: "answerDraw", accept: false })}>
+              Reddet
+            </button>
+          </span>
+        </div>
+      )}
+
+      {me && !g.result && (
+        <div className="chess-actions">
+          <button
+            className="ghost"
+            disabled={g.drawOffer === me || moveCount < 2}
+            onClick={() => send({ type: "offerDraw" })}
+            title={moveCount < 2 ? "Önce birkaç hamle oynanmalı" : undefined}
+          >
+            {g.drawOffer === me ? "Teklif gönderildi" : "Beraberlik teklif et"}
+          </button>
+          <button className="danger" onClick={() => confirm("Pes etmek istediğine emin misin?") && send({ type: "resign" })}>
+            Pes et
+          </button>
+        </div>
+      )}
     </div>
   );
+
+  const moveSheet = (
+    <div className="move-sheet">
+      <div className="move-nav" role="group" aria-label="Hamleler arasında gez">
+        <button className="small" onClick={() => goTo(0)} disabled={at === 0} aria-label="Başa">
+          <NavIcon d="M7 5v14M18 6l-7 6 7 6" />
+        </button>
+        <button className="small" onClick={() => goTo(at - 1)} disabled={at === 0} aria-label="Geri">
+          <NavIcon d="M15 6l-7 6 7 6" />
+        </button>
+        <button className="small" onClick={() => goTo(at + 1)} disabled={!reviewing} aria-label="İleri">
+          <NavIcon d="M9 6l7 6-7 6" />
+        </button>
+        <button className="small" onClick={() => setPly(null)} disabled={!reviewing} aria-label="Sona">
+          <NavIcon d="M17 5v14M6 6l7 6-7 6" />
+        </button>
+      </div>
+      <ol className="move-list" ref={list}>
+        {pairs.length === 0 && <li className="muted small empty">Henüz hamle yok. İlk hamle beyazın.</li>}
+        {pairs.map((p) => (
+          <li key={p.n}>
+            <span className="move-n">{p.n}.</span>
+            <button className={`move-san ${p.n * 2 - 1 === at ? "latest" : ""}`} onClick={() => goTo(p.n * 2 - 1)}>
+              {p.w}
+            </button>
+            {p.b ? (
+              <button className={`move-san ${p.n * 2 === at ? "latest" : ""}`} onClick={() => goTo(p.n * 2)}>
+                {p.b}
+              </button>
+            ) : (
+              <span />
+            )}
+          </li>
+        ))}
+      </ol>
+      <p className="muted small hint">
+        Taşı tutup gideceği kareye sürükle ya da önce taşa, sonra kareye dokun. Klavyede sol ve sağ ok hamleler arasında gezdirir.
+      </p>
+    </div>
+  );
+
+  return <GameLayout room={room} stage={stage} panels={[{ id: "moves", label: "Hamleler", content: moveSheet }]} />;
 }

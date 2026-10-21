@@ -10,7 +10,9 @@ import { chime, clack, tick } from "../sound";
 import { Toggle } from "../Toggle";
 import { setColorblind, useColorblind } from "../prefs";
 import { pointerDrag } from "../drag";
-import { TableChat, TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
+import { autoLay } from "../../../shared/games/okey-rules";
+import { TreatIcon, TreatTray, useSeatChat } from "./TableChat";
+import { GameLayout } from "../GameLayout";
 import { ROW, SLOTS, rackSummary, arrangeBest, arrangePairs, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
 
 const COLOR_NAMES = { red: "Kırmızı", yellow: "Sarı", blue: "Mavi", black: "Siyah" } as const;
@@ -34,8 +36,11 @@ function JokerMark() {
   );
 }
 
-export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, fresh }: {
+export function TileFace({ tile, okey, small, onClick, onPointerDown, onDoubleClick, selected, fresh, faceDown }: {
   tile: Tile;
+  /** Turned over on your own rack: only you know what it is. */
+  faceDown?: boolean;
+  onDoubleClick?: () => void;
   okey?: OkeyView["okey"];
   small?: boolean;
   selected?: boolean;
@@ -44,15 +49,16 @@ export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, 
   onPointerDown?: (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
   const wild = okey && tile.color === okey.color && tile.value === okey.value;
-  const cls = ["tile", tile.color ?? "joker", small && "small", selected && "selected", onClick && "clickable", wild && "wild", fresh && "fresh"];
+  const cls = ["tile", tile.color ?? "joker", small && "small", selected && "selected", onClick && "clickable", wild && "wild", fresh && "fresh", faceDown && "face-down"];
   return (
     <div
       className={cls.filter(Boolean).join(" ")}
       onClick={onClick}
       onPointerDown={onPointerDown}
-      title={wild ? "Okey" : undefined}
+      onDoubleClick={onDoubleClick}
+      title={faceDown ? "Ters çevrili taş" : wild ? "Okey" : undefined}
     >
-      {tile.color === null ? (
+      {faceDown ? null : tile.color === null ? (
         <JokerMark />
       ) : (
         <>
@@ -60,7 +66,7 @@ export function TileFace({ tile, okey, small, onClick, onPointerDown, selected, 
           <span className="tile-pip" />
         </>
       )}
-      {wild && <span className="tile-okey">okey</span>}
+      {wild && !faceDown && <span className="tile-okey">okey</span>}
     </div>
   );
 }
@@ -96,6 +102,25 @@ export function OkeyScreen({ room }: { room: RoomView }) {
   const [slots, setSlots] = useState<Slots>(() => loadSlots(storageKey));
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [fresh, setFresh] = useState<Set<number>>(new Set());
+  const flipKey = `${storageKey}.ters`;
+  const [flipped, setFlipped] = useState<Set<number>>(() => new Set(loadSlots(flipKey).filter((id): id is number => id !== null)));
+  useEffect(() => {
+    setFlipped(new Set(loadSlots(flipKey).filter((id): id is number => id !== null)));
+  }, [flipKey]);
+  const toggleFlip = (ids: number[]) =>
+    setFlipped((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
+      try {
+        localStorage.setItem(flipKey, JSON.stringify([...next]));
+      } catch {
+        // Flips just won't survive a refresh.
+      }
+      return next;
+    });
   const prevHand = useRef<Set<number> | null>(null);
   /** Slot a tile drawn by dragging should land in. */
   const drawTo = useRef<number | null>(null);
@@ -131,7 +156,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     return () => clearTimeout(t);
   }, [g.hand]);
 
-  const treatFor = useSeatTreats(room);
+  const seatChat = useSeatChat(room);
   const toast = useToast();
   const colorblind = useColorblind();
   // The server sends time left rather than a clock time, so device clocks don't matter.
@@ -143,6 +168,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     lastNotice.current = g.notice;
   }, [g.notice, toast]);
   const summary = useMemo(() => rackSummary(synced, g.hand, g.okey, !is101), [synced, g.hand, g.okey, is101]);
+  // Only the okey can be turned over, so others can't spot it on your rack.
+  const okeyIds = g.hand.filter((t) => t.color === g.okey.color && t.value === g.okey.value).map((t) => t.id);
   const tileById = new Map(g.hand.map((t) => [t.id, t]));
   const mySeat = g.mySeat;
   const myTurn = g.turn === mySeat && g.phase !== "roundOver";
@@ -222,9 +249,21 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       ghost ?? e.currentTarget,
     );
 
+  /** With tiles selected, lay those; with none, find the best groups in the hand. */
   const lay = async (type: "open" | "layMelds") => {
-    const groups = selectedGroups(synced, selected);
-    if (groups.length === 0) return;
+    let groups = selectedGroups(synced, selected);
+    if (groups.length === 0) {
+      const auto = autoLay(g.hand, g.okey, g.opened[mySeat]);
+      if (!auto.groups) {
+        toast(
+          type === "open"
+            ? `Açmaya yetmiyor: elinde ${auto.points} sayı ve ${auto.pairs} çift var (101 sayı ya da 5 çift gerek).`
+            : "Masaya koyacak geçerli grup yok.",
+        );
+        return;
+      }
+      groups = auto.groups;
+    }
     const res = await send({ type, groups });
     if (res.ok) setSelected(new Set());
   };
@@ -240,11 +279,20 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     const player = room.players.find((p) => p.id === s.id);
     const name = player?.name ?? "Ayrılan oyuncu";
     const turn = g.turn === index && g.phase !== "roundOver";
-    const treat = treatFor(s.id);
+    const treat = seatChat.treat(s.id);
+    const said = seatChat.bubble(s.id);
     return (
       <div className={`seat ${area} ${turn ? "turn" : ""}`} data-treat={s.id}>
         <span className="seat-avatar">
           <Avatar id={s.id} name={name} />
+          {turn && turnEndsAt && g.turnSeconds > 0 && (
+            <span className={`turn-ring ${secondsLeft <= 5 ? "low" : ""}`} style={{ ["--left" as string]: secondsLeft / g.turnSeconds }} />
+          )}
+          {said && (
+            <span key={said.id} className="seat-bubble" role="status">
+              <span className="bubble-text">{said.text}</span>
+            </span>
+          )}
           {g.dealer === index && <span className="dealer-chip" title="Dağıtan">D</span>}
           {treat && (
             <span key={treat} className="seat-treat">
@@ -255,6 +303,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         <span className="seat-name">
           {name}
           {player?.bot && <span className="seat-tag">bot</span>}
+          {g.esli && index === (mySeat + 2) % 4 && <span className="seat-tag partner">eşin</span>}
         </span>
         {turn && turnEndsAt && <span className={`seat-clock ${secondsLeft <= 5 ? "low" : ""}`}>{secondsLeft} sn</span>}
         <span className="seat-meta">
@@ -276,7 +325,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       : `${nameOf(room, g.seats[g.turn].id)} oynuyor…`;
   const clock = myTurn && turnEndsAt ? ` (${secondsLeft} sn)` : "";
 
-  return (
+  const stage = (
     <div className="okey" data-drag-layer>
       <div className="okey-hud">
         <span className="hud-item">
@@ -402,6 +451,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
                       fresh={fresh.has(tile.id)}
                       onClick={() => toggle(tile.id)}
                       onPointerDown={dragTile(tile.id)}
+                      onDoubleClick={okeyIds.includes(tile.id) ? () => toggleFlip([tile.id]) : undefined}
+                      faceDown={flipped.has(tile.id) && okeyIds.includes(tile.id)}
                     />
                   )}
                 </div>
@@ -447,6 +498,11 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         <button className="wood" onClick={() => setSlots(arrangePairs(g.hand, g.okey))}>
           Çift diz
         </button>
+        {okeyIds.length > 0 && (
+          <button className="wood" onClick={() => toggleFlip(okeyIds)} title="Elindeki okeyi ters çevirir; okeye çift dokunmak da çevirir">
+            {okeyIds.every((id) => flipped.has(id)) ? "Okeyi düz çevir" : "Okeyi ters çevir"}
+          </button>
+        )}
         {g.canShowIndicator && (
           <button className="wood" onClick={() => send({ type: "showIndicator" })} title="Göstergenin eşi elinde">
             Göstergeyi göster
@@ -457,13 +513,13 @@ export function OkeyScreen({ room }: { room: RoomView }) {
           <>
             {is101 && g.mustUseTileId !== null && <button onClick={() => send({ type: "returnDiscard" })}>Aldığımı geri koy</button>}
             {is101 && !g.opened[mySeat] && (
-              <button className="success chunky" disabled={selected.size === 0} onClick={() => lay("open")}>
-                Elimi aç
+              <button className="success chunky" onClick={() => lay("open")}>
+                {selected.size > 0 ? "Seçtiklerimle aç" : "Elimi aç"}
               </button>
             )}
             {is101 && g.opened[mySeat] && (
-              <button className="success chunky" disabled={selected.size === 0} onClick={() => lay("layMelds")}>
-                Yere koy
+              <button className="success chunky" onClick={() => lay("layMelds")}>
+                {selected.size > 0 ? "Seçtiklerimi koy" : "Yere koy"}
               </button>
             )}
             {!is101 && (
@@ -479,18 +535,30 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       </div>
       <p className="muted small hint">
         {is101 && myTurn && g.phase === "discard"
-          ? "Açmak için taşları seç; ıstakada aralarında boşluk olan taşlar ayrı grup sayılır."
-          : "Taşları sürükleyip istediğin yuvaya bırak. Çekmek için ortadaki desteyi ya da soldaki taşı ıstakaya, atmak için taşı sağ alt köşeye sürükle."}
+          ? "Elimi aç en iyi dizilişi bulup kendisi açar. İstersen taşları seçip kendin aç; aralarında boşluk olan taşlar ayrı grup sayılır."
+          : "Taşları sürükleyip istediğin yuvaya bırak. Çekmek için ortadaki desteyi ya da soldaki taşı ıstakaya, atmak için taşı sağ alt köşeye sürükle. Okeye çift dokununca ters döner."}
       </p>
+    </div>
+  );
 
-      <TableChat room={room} />
-
+  const scores = (
+    <div className="okey-scores">
       <div className="card">
-        <h4>
-          Puanlar {is101 && <span className="muted small">(az olan kazanır)</span>}
-          {g.katlamali && <span className="muted small">(sıfıra düşen olunca oyun biter)</span>}
-        </h4>
-        <table className="scores">
+        {is101 && <p className="muted small panel-note">101'de az puan kazanır.</p>}
+        {g.katlamali && <p className="muted small panel-note">Biri sıfıra düşünce oyun biter.</p>}
+        {g.teamScores && (
+          <table className="scores teams">
+            <tbody>
+              {g.teamScores.map((score, team) => (
+                <tr key={team} className={team === mySeat % 2 ? "me" : ""}>
+                  <td>{teamName(room, g, team)}</td>
+                  <td>{score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <table className={`scores ${g.esli ? "players" : ""}`}>
           <tbody>
             {g.seats.map((s, i) => (
               <tr key={s.id} className={i === mySeat ? "me" : ""}>
@@ -508,9 +576,21 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       </div>
     </div>
   );
+
+  return <GameLayout room={room} stage={stage} panels={[{ id: "scores", label: "Puanlar", content: scores }]} />;
+}
+
+function teamName(room: RoomView, g: OkeyView, team: number) {
+  return `${nameOf(room, g.seats[team].id)} & ${nameOf(room, g.seats[team + 2].id)}`;
 }
 
 function winnerName(room: RoomView, g: OkeyView) {
+  if (g.teamScores) {
+    const [a, b] = g.teamScores;
+    const lowWins = g.variant === "okey101";
+    if (a === b) return `${teamName(room, g, 0)} ile ${teamName(room, g, 1)} berabere`;
+    return teamName(room, g, (lowWins ? a < b : a > b) ? 0 : 1);
+  }
   const scores = g.seats.map((s) => s.score);
   const best = g.variant === "okey101" ? Math.min(...scores) : Math.max(...scores);
   return g.seats

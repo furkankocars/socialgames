@@ -7,6 +7,7 @@ import { useAct } from "../toast";
 import { nameOf, useCountdown } from "../hooks";
 import { Avatar } from "../Avatar";
 import { buzz, chime, success, tick } from "../sound";
+import { GameLayout } from "../GameLayout";
 
 const TEAM_NAMES = ["Kırmızı Takım", "Mavi Takım"];
 
@@ -27,6 +28,39 @@ function TimerRing({ seconds, total }: { seconds: number; total: number }) {
 }
 
 export function TabuScreen({ room }: { room: RoomView }) {
+  const g = room.game as TabuView;
+  const panels = [
+    {
+      id: "turn",
+      label: g.phase === "turn" ? "Bu tur" : "Son tur",
+      content: <TurnLog g={g} />,
+    },
+  ];
+  return <GameLayout room={room} stage={<TabuStage room={room} />} panels={panels} />;
+}
+
+/** Words of the current or last turn and how each went. */
+function TurnLog({ g }: { g: TabuView }) {
+  if (g.log.length === 0) return <p className="muted small">Tur başlayınca anlatılan kelimeler burada sırayla görünür.</p>;
+  const count = (r: string) => g.log.filter((l) => l.result === r).length;
+  return (
+    <div className="turn-log">
+      <p className="small muted">
+        {count("correct")} doğru · {count("taboo")} tabu · {count("pass")} pas
+      </p>
+      <ul className="tabu-log">
+        {g.log.map((l, i) => (
+          <li key={i} className={l.result}>
+            {l.word}
+            <span>{l.result === "correct" ? "doğru" : l.result === "pass" ? "pas" : "tabu"}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TabuStage({ room }: { room: RoomView }) {
   const g = room.game as TabuView;
   const act = useAct();
   const send = (action: TabuAction) => act(request("game:action", action));
@@ -66,6 +100,7 @@ export function TabuScreen({ room }: { room: RoomView }) {
             </div>
             <span key={g.scores[t]} className="team-score">
               {g.scores[t]}
+              <span className="score-unit">puan</span>
             </span>
             <div className="plate-members">
               {g.teams[t].map((id) => (
@@ -123,20 +158,6 @@ export function TabuScreen({ room }: { room: RoomView }) {
     );
   }
 
-  const log = g.log.length > 0 && (
-    <div className="card">
-      <h4>{g.phase === "turn" ? "Bu tur" : "Son tur"}</h4>
-      <ul className="tabu-log">
-        {g.log.map((l, i) => (
-          <li key={i} className={l.result}>
-            {l.word}
-            <span>{l.result === "correct" ? "doğru" : l.result === "pass" ? "pas" : "tabu"}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-
   if (g.phase === "ready") {
     return (
       <div className="tabu">
@@ -154,7 +175,6 @@ export function TabuScreen({ room }: { room: RoomView }) {
             </button>
           )}
         </div>
-        {log}
       </div>
     );
   }
@@ -202,7 +222,7 @@ export function TabuScreen({ room }: { room: RoomView }) {
             Tabu
           </button>
           <button className="chunky plain" disabled={g.passesLeft === 0} onClick={() => send({ type: "pass" })}>
-            Pas ({g.passesLeft})
+            {g.passesLeft === null ? "Pas" : `Pas (${g.passesLeft})`}
           </button>
           <button className="chunky success big" onClick={() => send({ type: "correct" })}>
             Doğru
@@ -214,7 +234,6 @@ export function TabuScreen({ room }: { room: RoomView }) {
           Tabu: yasaklı kelime söylendi
         </button>
       )}
-      {log}
     </div>
   );
 }

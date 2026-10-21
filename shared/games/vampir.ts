@@ -31,6 +31,13 @@ export interface VampirView {
   /** Day: public votes, null means "kimseyi asma". */
   votes: Record<string, string | null>;
   waitingCount: number;
+  /** Time left in a timed day when this view was sent; null when the day is untimed. */
+  dayMsLeft: number | null;
+  daySeconds: number;
+  /** Doctor only: last night's guarded player, who can't be guarded again tonight. */
+  guardBlocked: string | null;
+  /** Whether dead players' roles are announced. */
+  reveal: boolean;
   events: string[];
   winner: "vampir" | "koy" | null;
 }

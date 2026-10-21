@@ -116,7 +116,7 @@ export function rackSummary(slots: Slots, hand: Tile[], okey: Okey, byTiles: boo
   const all = new Set(hand.map((t) => t.id));
   let points = 0;
   for (const ids of selectedGroups(slots, all)) {
-    const result = analyzeGroup(ids.map((id) => byId.get(id)!), okey);
+    const result = analyzeGroup(ids.map((id) => byId.get(id)!), okey, byTiles);
     if (!result) continue;
     points += result.points;
   }

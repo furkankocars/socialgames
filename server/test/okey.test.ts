@@ -167,3 +167,30 @@ describe("101 Okey", () => {
     game.handleAction(next, { type: "discard", tileId: other.id });
   });
 });
+
+describe("Eşli", () => {
+  it("katlamalı: only the other team loses points, partners stay level", () => {
+    const { game, dealerId, dealer } = newGame("okey", winningHand, { katlamali: 1, startPoints: 20, esli: 1 });
+    const loose = game.getView(dealerId).hand.find((t) => t.color === "blue" && t.value === 12)!;
+    game.handleAction(dealerId, { type: "finish", tileId: loose.id });
+    const v = game.getView("p0");
+    v.seats.forEach((s, i) => expect(s.score).toBe(i % 2 === dealer % 2 ? 20 : 18));
+    expect(v.teamScores![dealer % 2]).toBe(20);
+    expect(v.teamScores![(dealer + 1) % 2]).toBe(18);
+  });
+
+  it("normal okey: the winner's partner scores too", () => {
+    const { game, dealerId, dealer } = newGame("okey", winningHand, { esli: 1 });
+    const loose = game.getView(dealerId).hand.find((t) => t.color === "blue" && t.value === 12)!;
+    game.handleAction(dealerId, { type: "finish", tileId: loose.id });
+    const v = game.getView("p0");
+    expect(v.seats[(dealer + 2) % 4].score).toBe(2);
+    expect(v.teamScores![dealer % 2]).toBe(2);
+  });
+
+  it("101: team score is the two partners' penalties added up", () => {
+    const { game } = newGame("okey101", [], { esli: 1 });
+    expect(game.getView("p0").teamScores).toEqual([0, 0]);
+    expect(newGame("okey101", []).game.getView("p0").teamScores).toBeNull();
+  });
+});

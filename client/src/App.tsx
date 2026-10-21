@@ -9,6 +9,7 @@ import { OkeyScreen } from "./games/OkeyScreen";
 import { ChessScreen } from "./games/ChessScreen";
 import { PistiScreen } from "./games/PistiScreen";
 import { setSound, useSoundEnabled } from "./sound";
+import { BrandMark } from "./BrandMark";
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ function Main() {
   if (!ready) {
     return (
       <div className="center-screen">
+        <BrandMark size={44} />
         <div className="loader" />
         <p>Sunucuya bağlanılıyor…</p>
         <p className="muted small">Bir süredir kimse girmediyse sunucunun uyanması bir dakika kadar sürebilir.</p>
@@ -37,40 +39,42 @@ function Main() {
   const isHost = room.hostId === room.you;
   const game = GAMES.find((g) => g.id === room.selectedGame)!;
 
+  const playing = room.status === "playing";
   return (
-    <div className="app">
+    <div className={`app ${playing ? "is-playing" : ""}`}>
       <header className="topbar">
-        <div>
-          <span className="brand">Sosyal Oyunlar</span>
+        <div className="topbar-id">
+          <BrandMark size={26} />
+          <span className="brand">{playing ? game.name : "Sosyal Oyunlar"}</span>
           <span className="room-code" title="Oda kodu">
-            {room.code}
+            <span className="room-code-label">Oda</span> {room.code}
           </span>
         </div>
         <div className="topbar-actions">
-          {room.status === "playing" && (
-            <button className="ghost" aria-pressed={sound} onClick={() => setSound(!sound)}>
-              {sound ? "Sesi kapat" : "Sesi aç"}
+          {playing && (
+            <button className="bar-btn" aria-pressed={sound} onClick={() => setSound(!sound)} title={sound ? "Sesi kapat" : "Sesi aç"}>
+              <SoundIcon on={sound} />
+              <span className="bar-text">{sound ? "Ses açık" : "Ses kapalı"}</span>
             </button>
           )}
-          {room.status === "playing" && isHost && (
-            <button className="ghost" onClick={() => confirm("Oyunu bitirip lobiye dönülsün mü?") && act(request("room:backToLobby"))}>
+          {playing && isHost && (
+            <button className="bar-btn" onClick={() => confirm("Oyunu bitirip lobiye dönülsün mü?") && act(request("room:backToLobby"))}>
               Lobiye dön
             </button>
           )}
-          <button className="ghost" onClick={() =>
-              confirm(room.status === "playing" ? "Odadan çıkılsın mı? Oyunu senin yerine bir bot bitirecek." : "Odadan çıkılsın mı?") &&
-              act(request("room:leave"))
-            }>
+          <button
+            className="bar-btn"
+            onClick={() => confirm(playing ? "Odadan çıkılsın mı? Oyunu senin yerine bir bot bitirecek." : "Odadan çıkılsın mı?") && act(request("room:leave"))}
+          >
             Çık
           </button>
         </div>
       </header>
-      <main className="content">
+      <main className={playing ? "content wide" : "content"}>
         {room.status === "lobby" ? (
           <Lobby room={room} />
         ) : (
           <>
-            <h2 className="game-title">{game.name}</h2>
             {room.selectedGame === "tabu" && <TabuScreen room={room} />}
             {room.selectedGame === "vampir" && <VampirScreen room={room} />}
             {(room.selectedGame === "okey" || room.selectedGame === "okey101") && <OkeyScreen room={room} />}
@@ -80,5 +84,15 @@ function Main() {
         )}
       </main>
     </div>
+  );
+}
+
+/** A speaker, with sound waves when on and a cross when off. */
+function SoundIcon({ on }: { on: boolean }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" className="bar-icon" aria-hidden>
+      <path d="M4 9h4l5-4v14l-5-4H4Z" />
+      {on ? <path d="M16 9c1.3 1.6 1.3 4.4 0 6M18.5 6.5c2.7 3 2.7 8 0 11" /> : <path d="M16.5 9.5l5 5M21.5 9.5l-5 5" />}
+    </svg>
   );
 }
