@@ -50,23 +50,21 @@ export function Lobby({ room }: { room: RoomView }) {
 
   return (
     <div className="lobby">
-      <section className="card">
-        <div className="row spread">
-          <h3>Oyuncular ({room.players.length})</h3>
-          <button onClick={share}>Davet et</button>
-        </div>
-        <p className="muted small">
-          Oda kodu: <strong className="mono">{room.code}</strong>
-        </p>
+      <section>
+        <h4>Oda kodu</h4>
+        <div className="code-display">{room.code}</div>
+        <button onClick={share}>Davet linkini paylaş</button>
+
+        <h4 style={{ marginTop: "2rem" }}>Masadakiler · {room.players.length}</h4>
         <ul className="player-list">
           {room.players.map((p) => (
             <li key={p.id} className={p.connected ? "" : "offline"}>
-              <span className={`dot ${p.connected ? "on" : ""}`} />
+              <span className={`dot ${p.connected ? "on" : ""}`} title={p.connected ? "Bağlı" : "Bağlantı koptu"} />
               <span className="grow">
                 {p.name}
                 {p.id === room.you && <span className="muted"> (sen)</span>}
               </span>
-              {p.id === room.hostId && <span title="Oda sahibi">👑</span>}
+              {p.id === room.hostId && <span className="tag">oda sahibi</span>}
               {isHost && p.id !== room.you && (
                 <button className="ghost small" onClick={() => confirm(`${p.name} odadan çıkarılsın mı?`) && act(request("room:kick", { playerId: p.id }))}>
                   Çıkar
@@ -77,24 +75,25 @@ export function Lobby({ room }: { room: RoomView }) {
         </ul>
       </section>
 
-      <section className="card">
-        <h3>Oyun</h3>
-        <div className="game-grid">
+      <section>
+        <h4>Ne oynuyoruz?</h4>
+        <ul className="game-choices">
           {GAMES.map((g) => (
-            <button
-              key={g.id}
-              className={`game-option ${g.id === room.selectedGame ? "selected" : ""}`}
-              disabled={!isHost}
-              onClick={() => act(request("room:selectGame", { gameId: g.id }))}
-            >
-              <strong>{g.name}</strong>
-              <span className="small">{g.description}</span>
-              <span className="small muted">
-                {g.minPlayers === g.maxPlayers ? `${g.minPlayers} kişi` : `${g.minPlayers}-${g.maxPlayers} kişi`}
-              </span>
-            </button>
+            <li key={g.id}>
+              <button
+                className={`game-choice ${g.id === room.selectedGame ? "selected" : ""}`}
+                disabled={!isHost}
+                aria-pressed={g.id === room.selectedGame}
+                onClick={() => act(request("room:selectGame", { gameId: g.id }))}
+              >
+                <span className="radio" />
+                <strong>{g.name}</strong>
+                <span className="small muted">{g.minPlayers === g.maxPlayers ? `${g.minPlayers} kişi` : `${g.minPlayers}–${g.maxPlayers} kişi`}</span>
+                <span className="desc">{g.description}</span>
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
 
         {isHost && OPTIONS[room.selectedGame].length > 0 && (
           <div className="options">
@@ -123,7 +122,7 @@ export function Lobby({ room }: { room: RoomView }) {
                 : `${selected.name} başlat`}
           </button>
         ) : (
-          <p className="muted center">Oda sahibinin oyunu başlatması bekleniyor…</p>
+          <p className="muted">Oyunu oda sahibi seçip başlatacak.</p>
         )}
       </section>
     </div>

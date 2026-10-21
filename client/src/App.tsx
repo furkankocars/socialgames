@@ -22,9 +22,9 @@ function Main() {
   if (!ready) {
     return (
       <div className="center-screen">
-        <div className="spinner" />
+        <div className="loader" />
         <p>Sunucuya bağlanılıyor…</p>
-        <p className="muted small">Sunucu uyuyorsa uyanması bir dakika sürebilir.</p>
+        <p className="muted small">Bir süredir kimse girmediyse sunucunun uyanması bir dakika kadar sürebilir.</p>
       </div>
     );
   }
@@ -37,7 +37,7 @@ function Main() {
     <div className="app">
       <header className="topbar">
         <div>
-          <span className="brand">🎲 Sosyal Oyunlar</span>
+          <span className="brand">Sosyal Oyunlar</span>
           <span className="room-code" title="Oda kodu">
             {room.code}
           </span>
