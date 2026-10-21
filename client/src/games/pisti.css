@@ -268,7 +268,7 @@
   box-shadow: 0 2px 4px rgb(0 0 0 / 0.35);
 }
 .pile-cards .pcard.fresh {
-  animation: pcard-drop 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  animation: pcard-drop 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 @keyframes pcard-drop {
   from {

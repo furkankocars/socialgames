@@ -192,7 +192,7 @@
   box-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
 }
 .discard-pile .tile {
-  animation: tile-drop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  animation: tile-drop 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 .tile-ghost {
   width: var(--tile-w);
@@ -484,7 +484,7 @@
     0 10px 12px rgb(0 0 0 / 0.4);
 }
 .tile.fresh {
-  animation: tile-arrive 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  animation: tile-arrive 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 @keyframes tile-arrive {
   from {

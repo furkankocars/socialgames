@@ -11,7 +11,8 @@ import { Toggle } from "../Toggle";
 import { setColorblind, useColorblind } from "../prefs";
 import { pointerDrag } from "../drag";
 import { autoLay } from "../../../shared/games/okey-rules";
-import { TableChat, TreatIcon, TreatTray, useSeatChat } from "./TableChat";
+import { TreatIcon, TreatTray, useSeatChat } from "./TableChat";
+import { GameLayout } from "../GameLayout";
 import { ROW, SLOTS, rackSummary, arrangeBest, arrangePairs, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
 
 const COLOR_NAMES = { red: "Kırmızı", yellow: "Sarı", blue: "Mavi", black: "Siyah" } as const;
@@ -284,6 +285,9 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       <div className={`seat ${area} ${turn ? "turn" : ""}`} data-treat={s.id}>
         <span className="seat-avatar">
           <Avatar id={s.id} name={name} />
+          {turn && turnEndsAt && g.turnSeconds > 0 && (
+            <span className={`turn-ring ${secondsLeft <= 5 ? "low" : ""}`} style={{ ["--left" as string]: secondsLeft / g.turnSeconds }} />
+          )}
           {said && (
             <span key={said.id} className="seat-bubble" role="status">
               <span className="bubble-text">{said.text}</span>
@@ -321,7 +325,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       : `${nameOf(room, g.seats[g.turn].id)} oynuyor…`;
   const clock = myTurn && turnEndsAt ? ` (${secondsLeft} sn)` : "";
 
-  return (
+  const stage = (
     <div className="okey" data-drag-layer>
       <div className="okey-hud">
         <span className="hud-item">
@@ -534,14 +538,14 @@ export function OkeyScreen({ room }: { room: RoomView }) {
           ? "Elimi aç en iyi dizilişi bulup kendisi açar. İstersen taşları seçip kendin aç; aralarında boşluk olan taşlar ayrı grup sayılır."
           : "Taşları sürükleyip istediğin yuvaya bırak. Çekmek için ortadaki desteyi ya da soldaki taşı ıstakaya, atmak için taşı sağ alt köşeye sürükle. Okeye çift dokununca ters döner."}
       </p>
+    </div>
+  );
 
-      <TableChat room={room} />
-
+  const scores = (
+    <div className="okey-scores">
       <div className="card">
-        <h4>
-          Puanlar {is101 && <span className="muted small">(az olan kazanır)</span>}
-          {g.katlamali && <span className="muted small">(sıfıra düşen olunca oyun biter)</span>}
-        </h4>
+        {is101 && <p className="muted small panel-note">101'de az puan kazanır.</p>}
+        {g.katlamali && <p className="muted small panel-note">Biri sıfıra düşünce oyun biter.</p>}
         {g.teamScores && (
           <table className="scores teams">
             <tbody>
@@ -572,6 +576,8 @@ export function OkeyScreen({ room }: { room: RoomView }) {
       </div>
     </div>
   );
+
+  return <GameLayout room={room} stage={stage} panels={[{ id: "scores", label: "Puanlar", content: scores }]} />;
 }
 
 function teamName(room: RoomView, g: OkeyView, team: number) {

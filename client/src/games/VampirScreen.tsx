@@ -1,17 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./vampir.css";
 import type { RoomView } from "../../../shared/protocol";
 import { VAMPIR_ROLE_NAMES, type VampirAction, type VampirRole, type VampirView } from "../../../shared/games/vampir";
 import { request } from "../socket";
 import { useAct } from "../toast";
-import { nameOf } from "../hooks";
+import { nameOf, useCountdown } from "../hooks";
+import { GameLayout } from "../GameLayout";
 import { Avatar } from "../Avatar";
 import { chime, dusk } from "../sound";
 
 const ROLE_HELP: Record<VampirRole, string> = {
   vampir: "Her gece diğer vampirlerle bir kurban seç. Gündüz köylü gibi davran.",
   koylu: "Gündüz tartış ve vampirleri bulup as.",
-  doktor: "Her gece bir kişiyi koru. Vampirler onu seçerse kurtulur. Kendini de koruyabilirsin.",
+  doktor: "Her gece bir kişiyi koru. Vampirler onu seçerse kurtulur. Kendini de koruyabilirsin ama aynı kişiyi iki gece üst üste koruyamazsın.",
   gozcu: "Her gece bir kişinin vampir olup olmadığını öğren.",
 };
 
@@ -72,6 +73,9 @@ export function VampirScreen({ room }: { room: RoomView }) {
   const role = g.myRole;
   const alivePlayers = g.players.filter((p) => p.alive);
   const night = g.phase === "night";
+  const dayEndsAt = useMemo(() => (g.dayMsLeft === null ? null : Date.now() + g.dayMsLeft), [g]);
+  const dayLeft = useCountdown(dayEndsAt);
+  const clock = dayEndsAt ? `${Math.floor(dayLeft / 60)}:${String(dayLeft % 60).padStart(2, "0")}` : null;
 
   useEffect(() => {
     if (g.phase === "finished") return;
@@ -161,7 +165,14 @@ export function VampirScreen({ room }: { room: RoomView }) {
     body = playerGrid(null, null);
   } else if (night) {
     const canAct = role !== "koylu";
-    const exclude = role === "vampir" ? (id: string) => g.players.find((p) => p.id === id)?.role === "vampir" : role === "gozcu" ? (id: string) => id === room.you : undefined;
+    const exclude =
+      role === "vampir"
+        ? (id: string) => g.players.find((p) => p.id === id)?.role === "vampir"
+        : role === "gozcu"
+          ? (id: string) => id === room.you
+          : role === "doktor"
+            ? (id: string) => id === g.guardBlocked
+            : undefined;
     const seerDone = role === "gozcu" && !g.mustAct;
     scene = (
       <Scene night>
@@ -172,7 +183,15 @@ export function VampirScreen({ room }: { room: RoomView }) {
           {role === "doktor" && "Kimi koruyacaksın?"}
           {role === "gozcu" && (seerDone ? "Bakışını yaptın" : "Kime bakacaksın?")}
         </h2>
-        <p>{!canAct ? "Sabahı bekle…" : role === "vampir" ? "Diğer vampirlerle anlaşın." : `${g.waitingCount} kişinin seçimi bekleniyor.`}</p>
+        <p>
+          {!canAct
+            ? "Sabahı bekle…"
+            : role === "vampir"
+              ? "Diğer vampirlerle anlaşın."
+              : role === "doktor" && g.guardBlocked
+                ? `Dün gece ${nameOf(room, g.guardBlocked)} kişisini korudun; bu gece başkasını seç.`
+                : `${g.waitingCount} kişinin seçimi bekleniyor.`}
+        </p>
       </Scene>
     );
     body = canAct ? playerGrid(seerDone ? null : (id) => send({ type: "nightTarget", targetId: id }), g.myTarget, exclude) : playerGrid(null, null);
@@ -180,9 +199,15 @@ export function VampirScreen({ room }: { room: RoomView }) {
     const myVote = g.votes[room.you];
     scene = (
       <Scene night={false}>
-        <span className="scene-kicker">{g.day}. gün</span>
+        <span className="scene-kicker">
+          {g.day}. gün{clock && <span className={`day-clock ${dayLeft <= 15 ? "low" : ""}`}> · {clock}</span>}
+        </span>
         <h2>Köy meydanında oylama</h2>
-        <p>Tartışın ve kimin asılacağını oylayın. Oylar herkes oy verince sayılır.</p>
+        <p>
+          {clock
+            ? "Tartışın ve oylayın. Süre bitince verilen oylar sayılır; herkes oy verirse gün erken biter."
+            : "Tartışın ve kimin asılacağını oylayın. Oylar herkes oy verince sayılır."}
+        </p>
       </Scene>
     );
     body = (
@@ -195,7 +220,7 @@ export function VampirScreen({ room }: { room: RoomView }) {
     );
   }
 
-  return (
+  const stage = (
     <div className={`vampir ${night ? "is-night" : "is-day"}`}>
       {roleCard}
       <div className="village-board">
@@ -209,6 +234,11 @@ export function VampirScreen({ room }: { room: RoomView }) {
           )}
         </div>
       </div>
+    </div>
+  );
+
+  const journal = (
+    <div className="journal">
       {role === "gozcu" && g.seerResults.length > 0 && (
         <div className="card">
           <h4>Gözcü notların</h4>
@@ -222,17 +252,16 @@ export function VampirScreen({ room }: { room: RoomView }) {
           </ul>
         </div>
       )}
-      <div className="card">
-        <h4>Köy defteri</h4>
-        <ol className="events">
-          {g.events
-            .slice()
-            .reverse()
-            .map((e, i) => (
-              <li key={g.events.length - i}>{e}</li>
-            ))}
-        </ol>
-      </div>
+      <ol className="events">
+        {g.events
+          .slice()
+          .reverse()
+          .map((e, i) => (
+            <li key={g.events.length - i}>{e}</li>
+          ))}
+      </ol>
     </div>
   );
+
+  return <GameLayout room={room} stage={stage} panels={[{ id: "journal", label: "Köy defteri", content: journal }]} />;
 }

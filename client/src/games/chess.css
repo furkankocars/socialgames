@@ -6,6 +6,10 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  /* The board fits the screen height on a laptop, the width on a phone. */
+  width: 100%;
+  max-width: max(320px, min(620px, 100dvh - 330px));
+  margin: 0 auto;
 }
 .chess-hud {
   display: flex;
@@ -28,17 +32,6 @@
   color: var(--ink-soft);
 }
 
-.chess-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 560px) minmax(220px, 1fr);
-  gap: 1rem 1.25rem;
-  align-items: start;
-}
-@media (max-width: 760px) {
-  .chess-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 .chess-main {
   display: flex;
   flex-direction: column;
@@ -361,26 +354,34 @@
   align-items: flex-start;
 }
 
-/* Side panel */
-.chess-side {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-width: 0;
-}
+/* Status line and controls under the board */
 .chess-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   font-family: var(--display);
   font-weight: 700;
-  font-size: 1.15rem;
-  padding: 0.55rem 0.75rem;
-  border-left: 4px solid var(--rule);
+  font-size: 1.1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: var(--paper-2);
 }
 .chess-status.mine {
-  border-left-color: var(--go);
+  background: var(--go);
+  color: var(--go-ink);
 }
 .chess-status.check {
-  border-left-color: var(--stop);
-  color: var(--stop);
+  background: var(--stop);
+  color: var(--accent-ink);
+}
+.chess-status.past {
+  background: var(--brass-soft);
+  font-family: var(--body);
+  font-size: 0.95rem;
+}
+.chess-board.past {
+  filter: saturate(0.6);
 }
 .draw-offer {
   display: flex;
@@ -399,52 +400,73 @@
   gap: 0.4rem;
 }
 .move-sheet {
-  border-top: 2px solid var(--ink);
-  padding-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.move-nav {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.3rem;
+}
+.move-nav button {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.35rem 0 0.45rem;
 }
 .move-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 260px;
+  max-height: 300px;
   overflow-y: auto;
   font-variant-numeric: tabular-nums;
-}
-@media (max-width: 760px) {
-  .move-list {
-    max-height: 132px;
-  }
 }
 .move-list li {
   display: grid;
   grid-template-columns: 2.6em 1fr 1fr;
-  padding: 0.2rem 0;
+  align-items: center;
   border-bottom: 1px dashed var(--rule);
+}
+.move-list li:nth-child(even) {
+  background: rgb(0 0 0 / 0.025);
 }
 .move-list li.empty {
   display: block;
   border: 0;
+  padding: 0.3rem 0;
 }
 .move-n {
   color: var(--ink-soft);
+  padding-left: 0.2rem;
 }
-.move-san {
+button.move-san {
+  border: 0;
+  border-radius: 3px;
+  text-align: left;
+  padding: 0.2rem 0.4rem;
   font-weight: 600;
 }
-.move-san.latest {
-  color: var(--accent);
-  font-weight: 800;
+button.move-san.latest {
+  background: var(--ink);
+  color: var(--paper);
 }
 .chess-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.5rem;
 }
-.chess-side .hint {
+.move-sheet .hint {
   margin: 0;
 }
-@media (max-width: 760px) {
-  .chess-side .hint {
-    display: none;
-  }
+.nav-icon {
+  display: block;
+  margin: 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }

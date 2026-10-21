@@ -144,8 +144,7 @@ export function TableChat({ room }: { room: RoomView }) {
   };
 
   return (
-    <div className="card table-chat">
-      <h4>Masa sohbeti</h4>
+    <div className="table-chat">
       <ol className="chat-log" ref={log}>
         {room.chat.length === 0 && <li className="chat-line muted">Henüz kimse bir şey yazmadı. Bir çay ısmarlayarak başla.</li>}
         {room.chat.map((c) => (
@@ -153,31 +152,27 @@ export function TableChat({ room }: { room: RoomView }) {
         ))}
       </ol>
       <div className="treat-row">
-        <label className="treat-to">
-          <span className="hud-label">Ismarla</span>
-          <select value={to} onChange={(e) => setTo(e.target.value)}>
-            <option value="">Bütün masaya</option>
-            {others.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <select className="treat-to" value={to} onChange={(e) => setTo(e.target.value)} aria-label="Kime ısmarlansın">
+          <option value="">Bütün masaya</option>
+          {others.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </select>
         {TREATS.map((t) => (
           <button
             key={t.id}
             className="treat-btn"
             onClick={() => act(request("room:chat", { treat: t.id, to: to || null }))}
             onPointerDown={dragTreat(act, t.id)}
-            title={`${t.name} ısmarla`}
+            title={`${t.name} ısmarla. Bir oyuncunun üstüne sürüklersen ona gider.`}
+            aria-label={`${t.name} ısmarla`}
           >
-            <TreatIcon treat={t.id} />
-            {t.name}
+            <TreatIcon treat={t.id} size={24} />
           </button>
         ))}
       </div>
-      <p className="muted small hint">Bardağı masadaki bir oyuncunun üstüne sürükle, ona gitsin; masanın ortasına bırakırsan herkese.</p>
       <form
         className="chat-form"
         onSubmit={(e) => {
@@ -185,7 +180,7 @@ export function TableChat({ room }: { room: RoomView }) {
           void sendText();
         }}
       >
-        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={160} placeholder="Masaya bir şey yaz…" aria-label="Mesaj" />
+        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={160} placeholder="Masaya yaz…" aria-label="Mesaj" />
         <button type="submit" className="primary" disabled={!text.trim()}>
           Gönder
         </button>

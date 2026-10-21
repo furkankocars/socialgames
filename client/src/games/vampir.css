@@ -248,10 +248,11 @@
   flex-direction: column;
   gap: 0.75rem;
 }
+/* Villagers stand in the square as tokens, each as wide as their name. */
 .village-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
 }
 .villager {
   position: relative;
@@ -259,17 +260,16 @@
   flex-direction: column;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.7rem 0.3rem 0.6rem;
+  padding: 0.55rem 0.7rem 0.5rem;
+  min-width: 76px;
   border: 1.5px solid transparent;
-  border-radius: 12px;
-  background: rgb(0 0 0 / 0.035);
+  border-radius: 6px;
+  background: transparent;
   text-align: center;
   font-weight: 400;
   transition: background 0.15s, border-color 0.15s, translate 0.15s;
 }
-.is-night .villager {
-  background: rgb(255 255 255 / 0.05);
-}
+
 .villager:hover:not(:disabled) {
   background: rgb(0 0 0 / 0.07);
   translate: 0 -2px;
@@ -349,7 +349,7 @@
   font-size: 0.7rem;
   font-weight: 800;
   box-shadow: 0 0 0 2px #1d2130;
-  animation: pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  animation: pop-in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1);
 }
 .votes {
   display: flex;
@@ -448,6 +448,13 @@
     padding: 1.2rem 1.4rem 1.4rem;
   }
   .village-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.5rem 0.75rem;
   }
+}
+
+.day-clock {
+  font-variant-numeric: tabular-nums;
+}
+.day-clock.low {
+  color: #f0a08f;
 }

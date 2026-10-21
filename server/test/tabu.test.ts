@@ -43,4 +43,26 @@ describe("Tabu", () => {
     for (let i = 0; i < 3; i++) game.handleAction(narrator, { type: "pass" });
     expect(() => game.handleAction(narrator, { type: "pass" })).toThrow();
   });
+
+  it("lets the host pick the pass limit, or none", () => {
+    for (const [passes, allowed] of [
+      [0, 0],
+      [5, 5],
+    ] as const) {
+      const { ctx } = fakeContext(4);
+      const game = new TabuGame(ctx, { passes });
+      game.handleAction("p0", { type: "begin" });
+      const narrator = game.getView("p0").narratorId!;
+      game.handleAction(narrator, { type: "startTurn" });
+      for (let i = 0; i < allowed; i++) game.handleAction(narrator, { type: "pass" });
+      expect(() => game.handleAction(narrator, { type: "pass" })).toThrow();
+    }
+    const { ctx } = fakeContext(4);
+    const game = new TabuGame(ctx, { passes: -1 });
+    game.handleAction("p0", { type: "begin" });
+    const narrator = game.getView("p0").narratorId!;
+    game.handleAction(narrator, { type: "startTurn" });
+    expect(game.getView(narrator).passesLeft).toBeNull();
+    for (let i = 0; i < 12; i++) game.handleAction(narrator, { type: "pass" });
+  });
 });

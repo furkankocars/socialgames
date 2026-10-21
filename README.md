@@ -6,12 +6,14 @@ Arkadaşlarla aynı odada oynanan grup oyunları platformu. Biri oda açar, 4 ha
 
 | Oyun | Oyuncu | Kısaca |
 | --- | --- | --- |
-| Tabu | 4-16 | İki takım. Anlatıcı ve rakip takım kartı görür, anlatıcının takımı tahmin eder. Doğru +1, Tabu -1, tur başına 3 pas. |
-| Vampir Köylü | 4-16 | Her 4 kişiye 1 vampir, 1 gözcü, 5+ kişide 1 doktor. Gece vampirler ısırır, doktor korur, gözcü bakar; gündüz herkes oylar. |
+| Tabu | 4-16 | İki takım. Anlatıcı ve rakip takım kartı görür, anlatıcının takımı tahmin eder. Doğru +1, Tabu -1. Pas hakkı (0, 3, 5 ya da sınırsız), tur süresi ve tur sayısı lobide seçilir. |
+| Vampir Köylü | 4-16 | Her 4 kişiye 1 vampir, 1 gözcü, 5+ kişide 1 doktor. Gece vampirler ısırır, doktor korur (aynı kişiyi iki gece üst üste koruyamaz), gözcü bakar; gündüz herkes oylar. İsteğe bağlı gündüz süresi; ölenin rolü açıklanabilir ya da gizli kalır. |
 | Okey | 4 | 106 taş, gösterge ve okey. Seri/per ya da 7 çift ile bitir. Normal bitiş +2, çiftten ya da okey atarak bitiş +4. |
 | 101 Okey | 4 | 101 sayıyla ya da 5 çiftle el aç, masadaki gruplara işle. Yandan alınan taş o el kullanılmalı. Bitiren -101, açmayan 202 ceza, açanlar elde kalan taşların toplamı. Çiftten ya da okeyle bitişte cezalar 2 katı. Az puan kazanır. |
-| Satranç | 2 | Tam kurallar: rok, geçerken alma, terfi, şah mat, pat, üç tekrar, 50 hamle, yetersiz taş. İsteğe bağlı satranç saati ve ek süre, beraberlik teklifi, pes etme, renkleri değiştiren rövanş. Taşlar sürüklenir ya da dokunarak oynanır. Kolay, orta ve zor bot. |
+| Satranç | 2 | Tam kurallar: rok, geçerken alma, terfi, şah mat, pat, üç tekrar, 50 hamle, yetersiz taş. İsteğe bağlı satranç saati ve ek süre, beraberlik teklifi, pes etme, renkleri değiştiren rövanş. Taşlar sürüklenir ya da dokunarak oynanır. Hamle listesinden ya da ok tuşlarıyla geçmiş konumlara dönülebilir. Kolay, orta ve zor bot. |
 | Pişti | 2 ya da 4 | Yerdeki üst kartla aynı kartı ya da vale atan yerdeki kartları alır. Tek karta aynısı pişti (10), valeye vale 20. El sonunda kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1. 4 kişide eşli oynanabilir. |
+
+Her oyun ekranında masa solda, yanında (telefonda altında) sekmeler durur: oyunun kendi paneli (puanlar, hamleler, köy defteri ya da tur kaydı), masa sohbeti ve o oyunun kuralları.
 
 ## Geliştirme
 

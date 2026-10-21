@@ -28,8 +28,21 @@ export class VampirGame implements GameInstance {
   private votes = new Map<string, string | null>();
   private events: string[] = [];
   private winner: VampirView["winner"] = null;
+  /** Whom the doctor guarded last night; the same person can't be guarded twice in a row. */
+  private lastGuarded: string | null = null;
+  /** Day discussion length in seconds; 0 means the day ends only when everyone has voted. */
+  private daySeconds: number;
+  private dayEndsAt: number | null = null;
+  /** Whether a dead player's role is announced to everyone. */
+  private reveal: boolean;
 
-  constructor(private ctx: GameContext) {
+  constructor(
+    private ctx: GameContext,
+    options: Record<string, unknown> = {},
+  ) {
+    const minutes = Number(options.dayMinutes);
+    this.daySeconds = [1, 2, 3, 5].includes(minutes) ? minutes * 60 : 0;
+    this.reveal = options.reveal !== 0;
     const roles = shuffle(rolesFor(ctx.players.length), ctx.random);
     this.players = ctx.players.map((p, i) => ({ id: p.id, name: p.name, role: roles[i], alive: true }));
     this.events.push("1. gece başladı. Herkes gözlerini kapatsın.");
@@ -45,7 +58,7 @@ export class VampirGame implements GameInstance {
       players: this.players.map((p) => ({
         id: p.id,
         alive: p.alive,
-        role: knowsAll || !p.alive || p.id === playerId || (isVampire && p.role === "vampir") ? p.role : undefined,
+        role: knowsAll || (!p.alive && this.reveal) || p.id === playerId || (isVampire && p.role === "vampir") ? p.role : undefined,
       })),
       myRole: me?.role ?? null,
       alive: me?.alive ?? false,
@@ -54,6 +67,10 @@ export class VampirGame implements GameInstance {
       seerResults: me?.role === "gozcu" ? this.seerResults.slice() : [],
       myTarget: this.nightTargets.get(playerId) ?? null,
       votes: Object.fromEntries(this.votes),
+      dayMsLeft: this.phase === "day" && this.dayEndsAt !== null ? Math.max(0, this.dayEndsAt - Date.now()) : null,
+      daySeconds: this.daySeconds,
+      guardBlocked: me?.role === "doktor" ? this.lastGuarded : null,
+      reveal: this.reveal,
       waitingCount: this.waitingCount(),
       events: this.events.slice(),
       winner: this.winner,
@@ -75,6 +92,7 @@ export class VampirGame implements GameInstance {
           if (this.nightTargets.has(me.id)) throw new GameError("Bu gece zaten birine baktın.");
           this.seerResults.push({ targetId: target.id, isVampire: target.role === "vampir" });
         }
+        if (me.role === "doktor" && target.id === this.lastGuarded) throw new GameError("Aynı kişiyi iki gece üst üste koruyamazsın.");
         this.nightTargets.set(me.id, target.id);
         if (this.waitingCount() === 0) this.resolveNight();
         return;
@@ -113,7 +131,8 @@ export class VampirGame implements GameInstance {
         const fresh = alive.filter((p) => p.id !== playerId && !checked.has(p.id));
         target = pick(fresh.length ? fresh : alive.filter((p) => p.id !== playerId));
       } else {
-        target = pick(alive);
+        const allowed = alive.filter((p) => p.id !== view.guardBlocked);
+        target = pick(allowed.length ? allowed : alive);
       }
       return target ? { type: "nightTarget", targetId: target.id } : null;
     }
@@ -130,23 +149,43 @@ export class VampirGame implements GameInstance {
     const victimId = this.pickMostVoted(vampireVotes, true);
     const doctor = this.players.find((p) => p.role === "doktor" && p.alive);
     const savedId = doctor ? this.nightTargets.get(doctor.id) : undefined;
+    this.lastGuarded = savedId ?? null;
     this.nightTargets.clear();
 
     if (victimId && victimId !== savedId) {
       const victim = this.get(victimId);
       victim.alive = false;
-      this.events.push(`${this.day}. gece ${victim.name} öldürüldü. (${VAMPIR_ROLE_NAMES[victim.role]})`);
+      this.events.push(`${this.day}. gece ${victim.name} öldürüldü.${this.roleNote(victim)}`);
     } else {
       this.events.push(`${this.day}. gece kimse ölmedi.`);
     }
     if (this.checkWinner()) return;
     this.phase = "day";
     this.events.push(`${this.day}. gün: tartışın ve oylayın.`);
+    this.startDayClock();
+  }
+
+  /** A timed day ends when the clock runs out, counting the votes cast so far. */
+  private startDayClock() {
+    this.dayEndsAt = null;
+    if (!this.daySeconds) return;
+    this.dayEndsAt = Date.now() + this.daySeconds * 1000;
+    const day = this.day;
+    this.ctx.setTimer(() => {
+      if (this.phase !== "day" || this.day !== day) return;
+      this.resolveDay();
+      this.ctx.update();
+    }, this.daySeconds * 1000);
+  }
+
+  private roleNote(p: Player): string {
+    return this.reveal ? ` (${VAMPIR_ROLE_NAMES[p.role]})` : "";
   }
 
   private resolveDay() {
     const votes = [...this.votes.values()];
     this.votes.clear();
+    this.dayEndsAt = null;
     // Skipping counts as a candidate, and a tie hangs nobody.
     const lynchedId = this.pickMostVoted(
       votes.map((v) => v ?? ""),
@@ -155,7 +194,7 @@ export class VampirGame implements GameInstance {
     if (lynchedId) {
       const lynched = this.get(lynchedId);
       lynched.alive = false;
-      this.events.push(`${this.day}. gün köy ${lynched.name} kişisini astı. (${VAMPIR_ROLE_NAMES[lynched.role]})`);
+      this.events.push(`${this.day}. gün köy ${lynched.name} kişisini astı.${this.roleNote(lynched)}`);
     } else {
       this.events.push(`${this.day}. gün kimse asılmadı.`);
     }
@@ -211,5 +250,5 @@ export class VampirGame implements GameInstance {
 
 export const vampir: GameDefinition = {
   id: "vampir",
-  create: (ctx) => new VampirGame(ctx),
+  create: (ctx, options) => new VampirGame(ctx, options),
 };

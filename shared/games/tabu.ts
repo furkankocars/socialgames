@@ -15,7 +15,8 @@ export interface TabuView {
   activeTeam: TabuTeam;
   narratorId: string | null;
   turnEndsAt: number | null;
-  passesLeft: number;
+  /** null when passes are unlimited. */
+  passesLeft: number | null;
   /** Visible to the narrator and the opposing team only. */
   card: TabuCard | null;
   /** What happened in the current or last turn. */

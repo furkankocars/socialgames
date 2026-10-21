@@ -3,6 +3,8 @@ import { GameError, shuffle, type GameAction, type GameContext, type GameDefinit
 import { TABU_CARDS } from "./words.js";
 
 const PASS_LIMIT = 3;
+/** The passes option value that means no limit. */
+const UNLIMITED = -1;
 
 export class TabuGame implements GameInstance {
   private phase: TabuView["phase"] = "setup";
@@ -15,7 +17,9 @@ export class TabuGame implements GameInstance {
   /** Fixed for the length of a turn, even if that player drops. */
   private turnNarrator: string | null = null;
   private turnEndsAt: number | null = null;
-  private passesLeft = PASS_LIMIT;
+  /** Passes allowed per turn; null means no limit. */
+  private passLimit: number | null;
+  private passesLeft: number | null;
   private deck: TabuCard[] = [];
   private card: TabuCard | null = null;
   private log: TabuView["log"] = [];
@@ -29,6 +33,8 @@ export class TabuGame implements GameInstance {
   ) {
     this.roundSeconds = clampInt(options.roundSeconds, 30, 180, 60);
     this.totalRounds = clampInt(options.rounds, 1, 10, 3);
+    this.passLimit = Number(options.passes) === UNLIMITED ? null : clampInt(options.passes, 0, 10, PASS_LIMIT);
+    this.passesLeft = this.passLimit;
     this.shuffleTeams();
   }
 
@@ -84,8 +90,10 @@ export class TabuGame implements GameInstance {
         this.requirePhase("turn");
         if (playerId !== this.narratorId()) throw new GameError("Bunu sadece anlatıcı yapabilir.");
         if (action.type === "pass") {
-          if (this.passesLeft <= 0) throw new GameError("Pas hakkın kalmadı.");
-          this.passesLeft--;
+          if (this.passesLeft !== null) {
+            if (this.passesLeft <= 0) throw new GameError("Pas hakkın kalmadı.");
+            this.passesLeft--;
+          }
         } else {
           this.scores[this.activeTeam]++;
         }
@@ -125,7 +133,7 @@ export class TabuGame implements GameInstance {
     // Rotation continues after whoever actually narrates, skipping bots.
     this.narratorIndex[this.activeTeam] = Math.max(0, this.teams[this.activeTeam].indexOf(this.turnNarrator!));
     this.phase = "turn";
-    this.passesLeft = PASS_LIMIT;
+    this.passesLeft = this.passLimit;
     this.log = [];
     this.turnEndsAt = Date.now() + this.roundSeconds * 1000;
     this.nextCard();
