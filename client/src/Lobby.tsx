@@ -2,31 +2,103 @@ import { useState } from "react";
 import { GAMES, type GameId, type RoomView } from "../../shared/protocol";
 import { request } from "./socket";
 import { useAct, useToast } from "./toast";
+import { Toggle } from "./Toggle";
+import { setColorblind, useColorblind } from "./prefs";
+
+type Values = Record<string, number>;
 
 interface Option {
   key: string;
   label: string;
-  choices: number[];
+  hint?: string | ((v: Values) => string);
+  choices: { value: number; label: string }[];
   initial: number;
-  suffix?: string;
+  /** An on/off setting (1 or 0), drawn as a switch. */
+  toggle?: boolean;
+  /** Shown only when this holds for the current values. */
+  when?: (v: Values) => boolean;
 }
+
+const nums = (values: number[], suffix = "") => values.map((value) => ({ value, label: `${value}${suffix}` }));
+const ON_OFF = [
+  { value: 1, label: "Açık" },
+  { value: 0, label: "Kapalı" },
+];
+
+const TURN_TIME: Option = {
+  key: "turnSeconds",
+  label: "Hamle süresi",
+  hint: (v) => (v.turnSeconds ? "Süre dolan oyuncunun hamlesini bot yapar." : "Herkes istediği kadar düşünebilir."),
+  choices: [{ value: 0, label: "Süresiz" }, ...nums([15, 30, 45, 60], " sn")],
+  initial: 0,
+};
 
 const OPTIONS: Record<GameId, Option[]> = {
   tabu: [
-    { key: "roundSeconds", label: "Tur süresi", choices: [45, 60, 90, 120], initial: 60, suffix: " sn" },
-    { key: "rounds", label: "Tur sayısı (her takım)", choices: [1, 2, 3, 4, 5, 6], initial: 3 },
+    { key: "roundSeconds", label: "Tur süresi", choices: nums([45, 60, 90, 120], " sn"), initial: 60 },
+    { key: "rounds", label: "Tur sayısı (her takım)", choices: nums([1, 2, 3, 4, 5, 6]), initial: 3 },
   ],
   vampir: [],
-  okey: [{ key: "rounds", label: "El sayısı", choices: [1, 3, 5, 7, 9], initial: 5 }],
-  okey101: [{ key: "rounds", label: "El sayısı", choices: [1, 2, 3, 4, 5], initial: 3 }],
+  okey: [
+    {
+      key: "katlamali",
+      label: "Oyun türü",
+      choices: [
+        { value: 0, label: "Normal" },
+        { value: 1, label: "Katlamalı" },
+      ],
+      initial: 0,
+      hint: (v) =>
+        v.katlamali
+          ? "Herkes puanla başlar. Biten oyuncu diğerlerine 2 puan kaybettirir; çiftten ya da okey atarak biterse katlanır (4), ikisi birden 8. Biri sıfıra düşünce oyun biter."
+          : "Biten oyuncu 2 puan alır, çiftten ya da okey atarak biterse 4. Eller bitince en çok puanı olan kazanır.",
+    },
+    { key: "startPoints", label: "Başlangıç puanı", choices: nums([10, 20, 30]), initial: 20, when: (v) => v.katlamali === 1 },
+    { key: "rounds", label: "El sayısı", choices: nums([1, 3, 5, 7, 9]), initial: 5, when: (v) => v.katlamali !== 1 },
+    {
+      key: "gosterge",
+      label: "Gösterge puanı",
+      toggle: true,
+      choices: ON_OFF,
+      initial: 1,
+      hint: (v) => `Göstergenin eşini ilk turunda gösteren ${v.katlamali ? "diğerlerine 1 puan kaybettirir" : "1 puan alır"}.`,
+    },
+    TURN_TIME,
+  ],
+  okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, TURN_TIME],
 };
+
+const OPTIONS_KEY = "socialgames.options";
+
+function loadValues(): Record<string, Values> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(OPTIONS_KEY) ?? "{}");
+    return raw && typeof raw === "object" ? raw : {};
+  } catch {
+    return {};
+  }
+}
 
 export function Lobby({ room }: { room: RoomView }) {
   const act = useAct();
   const toast = useToast();
   const isHost = room.hostId === room.you;
   const selected = GAMES.find((g) => g.id === room.selectedGame)!;
-  const [values, setValues] = useState<Record<string, number>>({});
+  // Remembered per game, so the host's usual table setup is ready next time.
+  const [saved, setSaved] = useState<Record<string, Values>>(loadValues);
+  const colorblind = useColorblind();
+  const options = OPTIONS[room.selectedGame];
+  const values: Values = Object.fromEntries(options.map((o) => [o.key, saved[room.selectedGame]?.[o.key] ?? o.initial]));
+  const setValue = (key: string, value: number) => {
+    const next = { ...saved, [room.selectedGame]: { ...values, [key]: value } };
+    setSaved(next);
+    try {
+      localStorage.setItem(OPTIONS_KEY, JSON.stringify(next));
+    } catch {
+      // Settings just won't be remembered.
+    }
+  };
+  const isOkey = room.selectedGame === "okey" || room.selectedGame === "okey101";
   const connected = room.players.filter((p) => p.connected).length;
 
   const share = async () => {
@@ -43,9 +115,7 @@ export function Lobby({ room }: { room: RoomView }) {
   };
 
   const start = () => {
-    const options: Record<string, number> = {};
-    for (const o of OPTIONS[room.selectedGame]) options[o.key] = values[o.key] ?? o.initial;
-    act(request("room:start", { options }));
+    act(request("room:start", { options: values }));
   };
 
   return (
@@ -107,21 +177,48 @@ export function Lobby({ room }: { room: RoomView }) {
           ))}
         </ul>
 
-        {isHost && OPTIONS[room.selectedGame].length > 0 && (
+        {isHost && options.length > 0 && (
           <div className="options">
-            {OPTIONS[room.selectedGame].map((o) => (
-              <label key={o.key} className="row">
-                <span className="grow">{o.label}</span>
-                <select value={values[o.key] ?? o.initial} onChange={(e) => setValues({ ...values, [o.key]: Number(e.target.value) })}>
-                  {o.choices.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                      {o.suffix}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
+            <h4>Ayarlar</h4>
+            {options
+              .filter((o) => !o.when || o.when(values))
+              .map((o) => {
+                const hint = typeof o.hint === "function" ? o.hint(values) : o.hint;
+                if (o.toggle) {
+                  return (
+                    <div key={o.key} className="setting">
+                      <Toggle on={values[o.key] === 1} onChange={(on) => setValue(o.key, on ? 1 : 0)} label={o.label} hint={hint} />
+                    </div>
+                  );
+                }
+                return (
+                  <div key={o.key} className="setting" role="group" aria-label={o.label}>
+                    <span className="setting-label">{o.label}</span>
+                    <div className="segmented">
+                      {o.choices.map((c) => (
+                        <button key={c.value} type="button" aria-pressed={values[o.key] === c.value} onClick={() => setValue(o.key, c.value)}>
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                    {hint && <span className="muted small">{hint}</span>}
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {isOkey && (
+          <div className="options">
+            <h4>Senin ekranın</h4>
+            <div className="setting">
+              <Toggle
+                on={colorblind}
+                onChange={setColorblind}
+                label="Renk körü modu"
+                hint="Her rengin taşında ayrı bir şekil olur: kırmızı üçgen, sarı kare, mavi baklava, siyah daire."
+              />
+            </div>
           </div>
         )}
 

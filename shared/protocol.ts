@@ -57,6 +57,28 @@ export interface PlayerView {
   bot: boolean;
 }
 
+/** Drinks a player can send across the table, as in a kahvehane. */
+export type Treat = "cay" | "kahve" | "oralet" | "soda";
+
+export const TREATS: { id: Treat; name: string }[] = [
+  { id: "cay", name: "Çay" },
+  { id: "kahve", name: "Türk kahvesi" },
+  { id: "oralet", name: "Oralet" },
+  { id: "soda", name: "Soda" },
+];
+
+export interface ChatEntry {
+  id: number;
+  at: number;
+  from: string;
+  /** Sender's name when the line was written, so it survives them leaving. */
+  name: string;
+  text?: string;
+  treat?: Treat;
+  /** Who the treat is for; null means the whole table. */
+  to?: string | null;
+}
+
 export interface RoomView {
   code: string;
   hostId: string;
@@ -66,6 +88,8 @@ export interface RoomView {
   status: "lobby" | "playing";
   /** Game-specific view, already filtered for the receiving player. */
   game: unknown;
+  /** Latest table chat lines, oldest first. */
+  chat: ChatEntry[];
 }
 
 export type Ack<T = object> = ({ ok: true } & T) | { ok: false; error: string };
@@ -80,6 +104,7 @@ export interface ClientToServer {
   "room:backToLobby": (ack: (res: Ack) => void) => void;
   "room:kick": (data: { playerId: string }, ack: (res: Ack) => void) => void;
   "room:addBot": (ack: (res: Ack) => void) => void;
+  "room:chat": (data: { text?: string; treat?: Treat; to?: string | null }, ack: (res: Ack) => void) => void;
   "game:action": (action: { type: string; [key: string]: unknown }, ack: (res: Ack) => void) => void;
 }
 

@@ -101,3 +101,9 @@ export function dusk() {
   tone(196, 0, 1.1, 0.12);
   tone(147, 0.05, 1.3, 0.08);
 }
+
+/** A spoon tapped on a tea glass: someone sent a drink. */
+export function clink() {
+  tone(2350, 0, 0.25, 0.07, "triangle");
+  tone(2350, 0.14, 0.3, 0.05, "triangle");
+}

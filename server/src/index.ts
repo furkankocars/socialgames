@@ -86,6 +86,7 @@ io.on("connection", (socket) => {
   socket.on("room:backToLobby", (ack) => run(ack, () => rooms.backToLobby(requirePlayer())));
   socket.on("room:addBot", (ack) => run(ack, () => rooms.addBot(requirePlayer())));
   socket.on("room:kick", ({ playerId: target }, ack) => run(ack, () => rooms.kick(requirePlayer(), target)));
+  socket.on("room:chat", (data, ack) => run(ack, () => rooms.chat(requirePlayer(), data ?? {})));
   socket.on("game:action", (action, ack) =>
     run(ack, () => {
       if (!action || typeof action.type !== "string") throw new GameError("Geçersiz hamle.");

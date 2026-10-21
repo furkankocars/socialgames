@@ -22,7 +22,16 @@ export interface OkeyView {
   variant: "okey" | "okey101";
   phase: "draw" | "discard" | "roundOver";
   round: number;
+  /** 0 in katlamalı, where the game runs until someone's points run out. */
   totalRounds: number;
+  /** Okey only: points start high and are lost; first to 0 ends the game. */
+  katlamali: boolean;
+  /** Time left in the current turn when this view was sent; null when turns are untimed. */
+  turnMsLeft: number | null;
+  turnSeconds: number;
+  /** You hold the indicator's twin and may show it now. */
+  canShowIndicator: boolean;
+  notice: string | null;
   seats: OkeySeatView[];
   mySeat: number;
   turn: number;
@@ -63,6 +72,7 @@ export type OkeyAction =
   | { type: "discard"; tileId: number }
   | { type: "finish"; tileId: number }
   | { type: "nextRound" }
+  | { type: "showIndicator" }
   // 101 only
   | { type: "open"; groups: number[][] }
   | { type: "layMelds"; groups: number[][] }

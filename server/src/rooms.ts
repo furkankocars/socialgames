@@ -1,4 +1,4 @@
-import { GAMES, type GameId, type RoomView } from "../../shared/protocol.js";
+import { GAMES, TREATS, type ChatEntry, type GameId, type RoomView, type Treat } from "../../shared/protocol.js";
 import { GameError, type GameAction, type GameContext, type GameInstance } from "./games/types.js";
 import { gameDefinitions } from "./games/index.js";
 
@@ -24,11 +24,16 @@ interface Room {
   seated: Set<string>;
   timers: Set<ReturnType<typeof setTimeout>>;
   botTimer: ReturnType<typeof setTimeout> | null;
+  chat: ChatEntry[];
 }
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const MAX_NAME_LENGTH = 20;
 const MAX_ROOM_PLAYERS = 16;
+const MAX_CHAT_LENGTH = 160;
+const CHAT_HISTORY = 40;
+/** Shortest gap between two chat lines from one player. */
+export const CHAT_GAP_MS = 700;
 
 /** How long a disconnected player keeps their lobby seat. */
 const LOBBY_GRACE_MS = 2 * 60 * 1000;
@@ -41,6 +46,8 @@ export type Notify = (playerId: string, view: RoomView | null) => void;
 
 export class RoomManager {
   private nextBotId = 1;
+  private nextChatId = 1;
+  private lastChatAt = new Map<string, number>();
   private rooms = new Map<string, Room>();
   private roomOfPlayer = new Map<string, string>();
   private lobbyCleanup = new Map<string, ReturnType<typeof setTimeout>>();
@@ -67,6 +74,7 @@ export class RoomManager {
       seated: new Set(),
       timers: new Set(),
       botTimer: null,
+      chat: [],
     };
     this.rooms.set(code, room);
     this.roomOfPlayer.set(playerId, code);
@@ -234,6 +242,31 @@ export class RoomManager {
     this.broadcast(room);
   }
 
+  /** A chat line or a drink sent to one player or the whole table. */
+  chat(playerId: string, data: { text?: unknown; treat?: unknown; to?: unknown }): void {
+    const room = this.roomFor(playerId);
+    if (!room) throw new GameError("Bir odada değilsin.");
+    const now = Date.now();
+    if (now - (this.lastChatAt.get(playerId) ?? 0) < CHAT_GAP_MS) throw new GameError("Biraz yavaş, herkes okuyabilsin.");
+    const sender = room.players.find((p) => p.id === playerId)!;
+    const entry: ChatEntry = { id: this.nextChatId++, at: now, from: playerId, name: sender.name };
+    if (data.treat !== undefined) {
+      if (!TREATS.some((t) => t.id === data.treat)) throw new GameError("Böyle bir ikram yok.");
+      const to = data.to ?? null;
+      if (to !== null && (to === playerId || !room.players.some((p) => p.id === to && !p.left))) throw new GameError("İkram edilecek kişi masada değil.");
+      entry.treat = data.treat as Treat;
+      entry.to = to as string | null;
+    } else {
+      const text = String(data.text ?? "").trim().slice(0, MAX_CHAT_LENGTH);
+      if (!text) throw new GameError("Boş mesaj gönderilemez.");
+      entry.text = text;
+    }
+    this.lastChatAt.set(playerId, now);
+    room.chat.push(entry);
+    if (room.chat.length > CHAT_HISTORY) room.chat.splice(0, room.chat.length - CHAT_HISTORY);
+    this.broadcast(room);
+  }
+
   /** Re-send the current state to a player (e.g. after reconnecting). */
   resend(playerId: string): void {
     const room = this.roomFor(playerId);
@@ -345,6 +378,7 @@ export class RoomManager {
       selectedGame: room.selectedGame,
       status: room.game ? "playing" : "lobby",
       game: room.game ? room.game.getView(playerId) : null,
+      chat: room.chat,
     };
   }
 

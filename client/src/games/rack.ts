@@ -1,4 +1,5 @@
 import type { Tile } from "../../../shared/games/okey";
+import { analyzeGroup, bestGroups, split, type Okey } from "../../../shared/games/okey-rules";
 
 export const ROW = 15;
 export const SLOTS = ROW * 2;
@@ -54,23 +55,6 @@ function layout(groups: Tile[][]): Slots {
 const colorOrder = { red: 0, yellow: 1, blue: 2, black: 3 } as const;
 const isWild = (t: Tile, okey: { color: string; value: number }) => t.color === okey.color && t.value === okey.value;
 
-/** Groups by color and consecutive values, jokers at the end. */
-export function arrangeRuns(hand: Tile[], okey: { color: string; value: number }): Slots {
-  const wilds = hand.filter((t) => isWild(t, okey));
-  const rest = hand
-    .filter((t) => !isWild(t, okey))
-    .sort((a, b) => (a.color === null ? 9 : colorOrder[a.color]) - (b.color === null ? 9 : colorOrder[b.color]) || a.value - b.value);
-  const groups: Tile[][] = [];
-  for (const t of rest) {
-    const g = groups[groups.length - 1];
-    const last = g?.[g.length - 1];
-    if (last && last.color === t.color && t.value === last.value + 1) g.push(t);
-    else groups.push([t]);
-  }
-  if (wilds.length) groups.push(wilds);
-  return layout(groups);
-}
-
 /** Puts identical tiles next to each other. */
 export function arrangePairs(hand: Tile[], okey: { color: string; value: number }): Slots {
   const wilds = hand.filter((t) => isWild(t, okey));
@@ -102,4 +86,50 @@ export function selectedGroups(slots: Slots, selected: Set<number>): number[][] 
   });
   if (current.length) groups.push(current);
   return groups;
+}
+
+/** Best runs and sets first, the loose tiles after them sorted by color. */
+export function arrangeBest(hand: Tile[], okey: Okey, byTiles: boolean): Slots {
+  const { groups } = bestGroups(hand, okey, byTiles);
+  const used = new Set(groups.flat().map((t) => t.id));
+  const loose = hand
+    .filter((t) => !used.has(t.id))
+    .sort((a, b) => (a.color === null ? 9 : colorOrder[a.color]) - (b.color === null ? 9 : colorOrder[b.color]) || a.value - b.value);
+  return layout(loose.length ? [...groups, loose] : groups);
+}
+
+export interface RackSummary {
+  /** The most points the hand's runs and sets can make. */
+  best: number;
+  /** Tiles the best split puts into groups. */
+  bestTiles: number;
+  /** Points of the valid runs and sets as they sit on the rack. */
+  points: number;
+  /** Pairs the whole hand can make, okeys filling in. */
+  pairs: number;
+}
+
+/** What the rack adds up to: groups are tiles side by side, split by gaps and the shelf edge. */
+export function rackSummary(slots: Slots, hand: Tile[], okey: Okey, byTiles: boolean): RackSummary {
+  const best = bestGroups(hand, okey, byTiles);
+  const byId = new Map(hand.map((t) => [t.id, t]));
+  const all = new Set(hand.map((t) => t.id));
+  let points = 0;
+  for (const ids of selectedGroups(slots, all)) {
+    const result = analyzeGroup(ids.map((id) => byId.get(id)!), okey);
+    if (!result) continue;
+    points += result.points;
+  }
+  const { normals, wilds } = split(hand, okey);
+  const counts = new Map<string, number>();
+  for (const n of normals) counts.set(`${n.color}-${n.value}`, (counts.get(`${n.color}-${n.value}`) ?? 0) + 1);
+  let pairs = 0;
+  let single = 0;
+  for (const c of counts.values()) {
+    pairs += Math.floor(c / 2);
+    single += c % 2;
+  }
+  const matched = Math.min(wilds, single);
+  pairs += matched + Math.floor((wilds - matched) / 2);
+  return { best: best.points, bestTiles: best.groups.flat().length, points, pairs };
 }

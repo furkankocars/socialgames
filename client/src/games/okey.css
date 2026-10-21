@@ -633,3 +633,104 @@ button.wood:active:not(:disabled) {
     border-radius: 4px;
   }
 }
+
+/* Drag and drop: tiles follow the finger, targets light up under it. */
+.tile.clickable,
+.draw-stack.ready {
+  touch-action: none;
+}
+.slot.drop-over {
+  background: rgb(240 199 94 / 0.45);
+  box-shadow: inset 0 0 0 2px #f0c75e;
+}
+.discard-spot.droppable .discard-pile {
+  outline: 2px dashed rgb(240 199 94 / 0.7);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.discard-spot.drop-over .discard-pile {
+  outline-style: solid;
+  outline-color: #f0c75e;
+  background: rgb(240 199 94 / 0.2);
+}
+.seat.drop-over .seat-avatar {
+  background: #fbf6e9;
+  box-shadow: 0 0 0 6px rgb(251 246 233 / 0.35);
+}
+.felt.drop-over {
+  box-shadow:
+    inset 0 3px 10px rgb(0 0 0 / 0.45),
+    inset 0 0 0 3px rgb(240 199 94 / 0.55);
+}
+
+/*
+ * Colour-blind mode: each colour gets its own shape under the number
+ * (red triangle, yellow square, blue diamond, black circle) and the hues
+ * move apart (orange instead of yellow, a lighter blue).
+ */
+:root[data-colorblind] {
+  --tile-yellow: #b35f00;
+  --tile-blue: #0a6fd6;
+}
+:root[data-colorblind] .tile-pip {
+  width: 0.42em;
+  height: 0.42em;
+  opacity: 1;
+}
+:root[data-colorblind] .tile.red .tile-pip {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  width: 0.48em;
+}
+:root[data-colorblind] .tile.yellow .tile-pip {
+  border-radius: 1px;
+  width: 0.36em;
+  height: 0.36em;
+}
+:root[data-colorblind] .tile.blue .tile-pip {
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  width: 0.48em;
+  height: 0.48em;
+}
+
+.hud-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.seat-clock {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: #f0c75e;
+  color: var(--ink);
+}
+.seat-clock.low {
+  background: #e0573a;
+  color: #fff8ef;
+}
+
+/* What the rack adds up to, right under the ıstaka. */
+.rack-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+  margin-top: -0.25rem;
+}
+.rack-summary strong {
+  font-size: 1.05rem;
+}
+.rack-summary em.ok {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--go);
+}
