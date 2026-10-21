@@ -16,12 +16,18 @@ export interface GameContext {
   random(): number;
   /** The room's current host, who controls setup and round changes. */
   hostId(): string;
+  /** Whether a bot currently plays this seat (its player left or dropped). */
+  isBot(playerId: string): boolean;
 }
+
+export type GameAction = { type: string; [key: string]: unknown };
 
 export interface GameInstance {
   getView(playerId: string): unknown;
   /** Throws GameError for invalid moves. */
-  handleAction(playerId: string, action: { type: string; [key: string]: unknown }): void;
+  handleAction(playerId: string, action: GameAction): void;
+  /** The next move a bot would make for this player, or null to wait. */
+  botAction?(playerId: string): GameAction | null;
 }
 
 export interface GameDefinition {

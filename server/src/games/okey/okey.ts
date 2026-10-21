@@ -1,6 +1,7 @@
 import type { OkeyMeld, OkeyRoundResult, OkeyView, Tile } from "../../../../shared/games/okey.js";
 import { clampInt } from "../tabu/tabu.js";
-import { GameError, type GameContext, type GameDefinition, type GameInstance } from "../types.js";
+import { GameError, type GameAction, type GameContext, type GameDefinition, type GameInstance } from "../types.js";
+import { okeyBotAction } from "./bot.js";
 import {
   analyzeGroup,
   canFinishWithMelds,
@@ -236,6 +237,10 @@ export class OkeyGame implements GameInstance {
       default:
         throw new GameError("Bilinmeyen hamle.");
     }
+  }
+
+  botAction(playerId: string): GameAction | null {
+    return okeyBotAction(this.getView(playerId));
   }
 
   private finish101(seat: number, lastTile: Tile) {

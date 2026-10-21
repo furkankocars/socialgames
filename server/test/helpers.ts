@@ -11,6 +11,7 @@ export function seeded(seed = 1) {
 
 export function fakeContext(count: number, seed = 1) {
   const timers: (() => void)[] = [];
+  const bots = new Set<string>();
   const ctx: GameContext = {
     players: Array.from({ length: count }, (_, i) => ({ id: `p${i}`, name: `Oyuncu ${i}` })),
     update: () => {},
@@ -18,6 +19,7 @@ export function fakeContext(count: number, seed = 1) {
     clearTimers: () => (timers.length = 0),
     random: seeded(seed),
     hostId: () => "p0",
+    isBot: (id) => bots.has(id),
   };
-  return { ctx, runTimers: () => timers.splice(0).forEach((fn) => fn()) };
+  return { ctx, bots, runTimers: () => timers.splice(0).forEach((fn) => fn()) };
 }

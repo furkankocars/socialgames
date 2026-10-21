@@ -46,6 +46,8 @@ export interface PlayerView {
   id: string;
   name: string;
   connected: boolean;
+  /** A bot plays this seat until the player comes back. */
+  bot: boolean;
 }
 
 export interface RoomView {

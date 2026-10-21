@@ -1,5 +1,5 @@
 import { VAMPIR_ROLE_NAMES, type VampirRole, type VampirView } from "../../../../shared/games/vampir.js";
-import { GameError, shuffle, type GameContext, type GameDefinition, type GameInstance } from "../types.js";
+import { GameError, shuffle, type GameAction, type GameContext, type GameDefinition, type GameInstance } from "../types.js";
 
 interface Player {
   id: string;
@@ -89,6 +89,40 @@ export class VampirGame implements GameInstance {
       default:
         throw new GameError("Bilinmeyen hamle.");
     }
+  }
+
+  /**
+   * Bots only use what their player could see: vampires bite a random villager
+   * (joining a fellow vampire's pick), the seer checks someone unchecked, the
+   * doctor guards someone at random. By day a seer bot votes for a vampire it
+   * found; everyone else abstains rather than steer the village.
+   */
+  botAction(playerId: string): GameAction | null {
+    const view = this.getView(playerId);
+    if (!view.alive || !view.myRole) return null;
+    const alive = view.players.filter((p) => p.alive);
+    const pick = (options: typeof alive) => options[Math.floor(this.ctx.random() * options.length)];
+
+    if (view.phase === "night" && view.mustAct) {
+      let target: (typeof alive)[number] | undefined;
+      if (view.myRole === "vampir") {
+        const chosen = Object.values(view.vampireTargets)[0];
+        target = alive.find((p) => p.id === chosen) ?? pick(alive.filter((p) => p.role !== "vampir"));
+      } else if (view.myRole === "gozcu") {
+        const checked = new Set(view.seerResults.map((r) => r.targetId));
+        const fresh = alive.filter((p) => p.id !== playerId && !checked.has(p.id));
+        target = pick(fresh.length ? fresh : alive.filter((p) => p.id !== playerId));
+      } else {
+        target = pick(alive);
+      }
+      return target ? { type: "nightTarget", targetId: target.id } : null;
+    }
+
+    if (view.phase === "day" && !(playerId in view.votes)) {
+      const found = view.seerResults.find((r) => r.isVampire && alive.some((p) => p.id === r.targetId));
+      return { type: "vote", targetId: found?.targetId ?? null };
+    }
+    return null;
   }
 
   private resolveNight() {

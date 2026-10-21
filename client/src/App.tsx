@@ -48,7 +48,10 @@ function Main() {
               Lobiye dön
             </button>
           )}
-          <button className="ghost" onClick={() => confirm("Odadan çıkılsın mı?") && act(request("room:leave"))}>
+          <button className="ghost" onClick={() =>
+              confirm(room.status === "playing" ? "Odadan çıkılsın mı? Oyunu senin yerine bir bot bitirecek." : "Odadan çıkılsın mı?") &&
+              act(request("room:leave"))
+            }>
             Çık
           </button>
         </div>
