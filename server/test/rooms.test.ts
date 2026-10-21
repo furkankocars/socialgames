@@ -115,5 +115,35 @@ describe("RoomManager", () => {
     for (const id of ["a", "b", "c", "d"]) rooms.leaveRoom(id);
     expect(() => rooms.joinRoom("a", code, "Ali")).toThrow("Oda bulunamadı.");
   });
-});
 
+  it("lets the host fill empty seats with bots that play on their own", () => {
+    vi.useFakeTimers();
+    const { rooms, views } = setup();
+    const code = rooms.createRoom("a", "Ali");
+    rooms.joinRoom("b", code, "Banu");
+    expect(() => rooms.addBot("b")).toThrow(/oda sahibi/);
+    expect(() => rooms.addBot("a")).toThrow(/botlarla oynanmaz/);
+    rooms.selectGame("a", "okey");
+    rooms.addBot("a");
+    rooms.addBot("a");
+    rooms.addBot("a");
+    const bots = views.get("a")!.players.filter((p) => p.bot);
+    expect(bots.map((p) => p.name)).toEqual(["Bot 1", "Bot 2", "Bot 3"]);
+    rooms.kick("a", bots[2].id);
+    rooms.startGame("a", {});
+    for (let i = 0; i < 40; i++) vi.advanceTimersByTime(BOT_DELAY_MS);
+    const game = views.get("a")!.game as OkeyView;
+    // Bots kept playing until it was a human's turn.
+    expect(["a", "b"]).toContain(game.seats[game.turn].id);
+
+    rooms.backToLobby("a");
+    expect(views.get("a")!.players.filter((p) => p.bot)).toHaveLength(2);
+    rooms.selectGame("a", "tabu");
+    rooms.joinRoom("c", code, "Can");
+    expect(() => rooms.startGame("a", {})).toThrow(/botları çıkar/);
+
+    // A room with only bots left in it closes.
+    for (const id of ["a", "b", "c"]) rooms.leaveRoom(id);
+    expect(() => rooms.joinRoom("a", code, "Ali")).toThrow("Oda bulunamadı.");
+  });
+});

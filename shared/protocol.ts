@@ -9,6 +9,8 @@ export interface GameInfo {
   description: string;
   minPlayers: number;
   maxPlayers: number;
+  /** Whether the host can fill empty seats with bots. */
+  bots: boolean;
 }
 
 export const GAMES: GameInfo[] = [
@@ -18,6 +20,8 @@ export const GAMES: GameInfo[] = [
     description: "İki takım, yasaklı kelimeleri kullanmadan anlat.",
     minPlayers: 4,
     maxPlayers: 16,
+    // Bots can neither describe nor guess words.
+    bots: false,
   },
   {
     id: "vampir",
@@ -25,6 +29,7 @@ export const GAMES: GameInfo[] = [
     description: "Geceleri vampirler avlanır, gündüz köy oylar.",
     minPlayers: 4,
     maxPlayers: 16,
+    bots: true,
   },
   {
     id: "okey",
@@ -32,6 +37,7 @@ export const GAMES: GameInfo[] = [
     description: "Klasik 4 kişilik okey. Elini diz, ilk biten kazanır.",
     minPlayers: 4,
     maxPlayers: 4,
+    bots: true,
   },
   {
     id: "okey101",
@@ -39,6 +45,7 @@ export const GAMES: GameInfo[] = [
     description: "101 sayıyla el aç, masaya işle, en az ceza alan kazanır.",
     minPlayers: 4,
     maxPlayers: 4,
+    bots: true,
   },
 ];
 
@@ -46,7 +53,7 @@ export interface PlayerView {
   id: string;
   name: string;
   connected: boolean;
-  /** A bot plays this seat until the player comes back. */
+  /** A bot plays this seat: one the host added, or one standing in for a player who left. */
   bot: boolean;
 }
 
@@ -72,6 +79,7 @@ export interface ClientToServer {
   "room:start": (data: { options?: Record<string, unknown> }, ack: (res: Ack) => void) => void;
   "room:backToLobby": (ack: (res: Ack) => void) => void;
   "room:kick": (data: { playerId: string }, ack: (res: Ack) => void) => void;
+  "room:addBot": (ack: (res: Ack) => void) => void;
   "game:action": (action: { type: string; [key: string]: unknown }, ack: (res: Ack) => void) => void;
 }
 

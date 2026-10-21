@@ -64,15 +64,27 @@ export function Lobby({ room }: { room: RoomView }) {
                 {p.name}
                 {p.id === room.you && <span className="muted"> (sen)</span>}
               </span>
+              {p.bot && <span className="tag">bot</span>}
               {p.id === room.hostId && <span className="tag">oda sahibi</span>}
               {isHost && p.id !== room.you && (
-                <button className="ghost small" onClick={() => confirm(`${p.name} odadan çıkarılsın mı?`) && act(request("room:kick", { playerId: p.id }))}>
+                <button
+                  className="ghost small"
+                  onClick={() => (p.bot || confirm(`${p.name} odadan çıkarılsın mı?`)) && act(request("room:kick", { playerId: p.id }))}
+                >
                   Çıkar
                 </button>
               )}
             </li>
           ))}
         </ul>
+        {isHost && selected.bots && connected < selected.maxPlayers && (
+          <div className="bot-add">
+            <button className="ghost" onClick={() => act(request("room:addBot"))}>
+              Bot ekle
+            </button>
+            <span className="small muted">Eksik koltuklarda bot oynar.</span>
+          </div>
+        )}
       </section>
 
       <section>
