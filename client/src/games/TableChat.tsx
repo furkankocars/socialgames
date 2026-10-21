@@ -194,29 +194,38 @@ export function TableChat({ room }: { room: RoomView }) {
   );
 }
 
+/** How long a chat line stays in a bubble over the writer's seat. */
+export const BUBBLE_SHOW_MS = 6000;
+
 /**
- * The drink to show on each seat: one sent to that player (or the whole table)
- * in the last few seconds. Timed by arrival on this device, not the server clock.
+ * What to show on each seat: a drink sent to that player (or the whole table)
+ * and the line they last wrote, each for a few seconds. Timed by arrival on
+ * this device, not the server clock.
  */
-export function useSeatTreats(room: RoomView): (playerId: string) => Treat | null {
+export function useSeatChat(room: RoomView): { treat: (playerId: string) => Treat | null; bubble: (playerId: string) => ChatEntry | null } {
   const [now, setNow] = useState(Date.now());
   const arrived = useRef<Map<number, number> | null>(null);
   if (!arrived.current) arrived.current = new Map(room.chat.map((c) => [c.id, 0]));
   const seen = arrived.current;
   for (const c of room.chat) if (!seen.has(c.id)) seen.set(c.id, Date.now());
 
-  const latest = room.chat.filter((c) => c.treat).at(-1)?.id;
+  const latest = room.chat.at(-1)?.id;
   useEffect(() => {
     if (latest === undefined) return;
     setNow(Date.now());
-    const t = setTimeout(() => setNow(Date.now()), TREAT_SHOW_MS + 50);
-    return () => clearTimeout(t);
+    const t = setTimeout(() => setNow(Date.now()), Math.max(TREAT_SHOW_MS, BUBBLE_SHOW_MS) + 50);
+    const b = setTimeout(() => setNow(Date.now()), BUBBLE_SHOW_MS + 50);
+    return () => {
+      clearTimeout(t);
+      clearTimeout(b);
+    };
   }, [latest]);
 
-  return (playerId) => {
-    const hit = [...room.chat].reverse().find(
-      (c) => c.treat && now - (seen.get(c.id) ?? 0) < TREAT_SHOW_MS && (c.to === playerId || (c.to === null && c.from !== playerId)),
-    );
-    return hit?.treat ?? null;
+  const recent = (c: ChatEntry, ms: number) => now - (seen.get(c.id) ?? 0) < ms;
+  const newestFirst = [...room.chat].reverse();
+  return {
+    treat: (playerId) =>
+      newestFirst.find((c) => c.treat && recent(c, TREAT_SHOW_MS) && (c.to === playerId || (c.to === null && c.from !== playerId)))?.treat ?? null,
+    bubble: (playerId) => newestFirst.find((c) => c.text && c.from === playerId && recent(c, BUBBLE_SHOW_MS)) ?? null,
   };
 }

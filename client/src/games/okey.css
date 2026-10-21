@@ -734,3 +734,13 @@ button.wood:active:not(:disabled) {
   font-weight: 700;
   color: var(--go);
 }
+
+@media (max-width: 480px) {
+  /* Room for the drink tray: the okey's name says what the label would. */
+  .okey-hud .hud-item:last-child .hud-label {
+    display: none;
+  }
+  .okey-hud .hud-item {
+    white-space: nowrap;
+  }
+}

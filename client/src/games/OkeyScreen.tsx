@@ -10,7 +10,7 @@ import { chime, clack, tick } from "../sound";
 import { Toggle } from "../Toggle";
 import { setColorblind, useColorblind } from "../prefs";
 import { pointerDrag } from "../drag";
-import { TableChat, TreatIcon, TreatTray, useSeatTreats } from "./TableChat";
+import { TableChat, TreatIcon, TreatTray, useSeatChat } from "./TableChat";
 import { ROW, SLOTS, rackSummary, arrangeBest, arrangePairs, moveTiles, selectedGroups, syncSlots, type Slots } from "./rack";
 
 const COLOR_NAMES = { red: "Kırmızı", yellow: "Sarı", blue: "Mavi", black: "Siyah" } as const;
@@ -131,7 +131,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     return () => clearTimeout(t);
   }, [g.hand]);
 
-  const treatFor = useSeatTreats(room);
+  const seatChat = useSeatChat(room);
   const toast = useToast();
   const colorblind = useColorblind();
   // The server sends time left rather than a clock time, so device clocks don't matter.
@@ -240,11 +240,17 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     const player = room.players.find((p) => p.id === s.id);
     const name = player?.name ?? "Ayrılan oyuncu";
     const turn = g.turn === index && g.phase !== "roundOver";
-    const treat = treatFor(s.id);
+    const treat = seatChat.treat(s.id);
+    const said = seatChat.bubble(s.id);
     return (
       <div className={`seat ${area} ${turn ? "turn" : ""}`} data-treat={s.id}>
         <span className="seat-avatar">
           <Avatar id={s.id} name={name} />
+          {said && (
+            <span key={said.id} className="seat-bubble" role="status">
+              <span className="bubble-text">{said.text}</span>
+            </span>
+          )}
           {g.dealer === index && <span className="dealer-chip" title="Dağıtan">D</span>}
           {treat && (
             <span key={treat} className="seat-treat">
