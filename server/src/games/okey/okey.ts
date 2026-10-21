@@ -42,6 +42,8 @@ export class OkeyGame implements GameInstance {
   /** Katlamalı: everyone starts with points and loses them; first to 0 ends the game. */
   private katlamali: boolean;
   private indicatorBonus: boolean;
+  /** Eşli: players opposite each other (seats 0+2, 1+3) score as a team. */
+  private esli: boolean;
   private shownIndicator = [false, false, false, false];
   private turnMs: number;
   private turnEndsAt: number | null = null;
@@ -57,6 +59,7 @@ export class OkeyGame implements GameInstance {
     this.totalRounds = clampInt(options.rounds, 1, 20, variant === "okey" ? 5 : 3);
     this.katlamali = variant === "okey" && options.katlamali === 1;
     this.indicatorBonus = variant === "okey" && options.gosterge !== 0;
+    this.esli = options.esli === 1;
     const seconds = clampInt(options.turnSeconds, 0, 120, 0);
     this.turnMs = seconds === 0 ? 0 : Math.max(10, seconds) * 1000;
     if (this.katlamali) this.scores.fill(clampInt(options.startPoints, 4, 50, 20));
@@ -97,6 +100,8 @@ export class OkeyGame implements GameInstance {
       round: this.round,
       totalRounds: this.katlamali ? 0 : this.totalRounds,
       katlamali: this.katlamali,
+      esli: this.esli,
+      teamScores: this.esli ? [this.teamScore(0), this.teamScore(1)] : null,
       turnMsLeft: this.turnEndsAt === null ? null : Math.max(0, this.turnEndsAt - Date.now()),
       turnSeconds: this.turnMs / 1000,
       canShowIndicator: mySeat >= 0 && this.canShowIndicator(mySeat),
@@ -150,9 +155,10 @@ export class OkeyGame implements GameInstance {
       case "showIndicator": {
         if (!this.canShowIndicator(seat)) throw new GameError("Göstergeyi şimdi gösteremezsin.");
         this.shownIndicator[seat] = true;
-        const deltas = this.seats.map((_, s) => (this.katlamali ? (s === seat ? 0 : -1) : s === seat ? 1 : 0));
+        const mine = (s: number) => (this.esli ? s % 2 === seat % 2 : s === seat);
+        const deltas = this.seats.map((_, s) => (this.katlamali ? (mine(s) ? 0 : -1) : mine(s) ? 1 : 0));
         deltas.forEach((d, s) => (this.scores[s] += d));
-        this.notice = `${this.name(seat)} göstergeyi gösterdi (${this.katlamali ? "herkese -1" : "+1"}).`;
+        this.notice = `${this.name(seat)} göstergeyi gösterdi (${this.katlamali ? (this.esli ? "rakiplere -1" : "herkese -1") : "+1"}).`;
         return;
       }
       case "drawCenter": {
@@ -214,12 +220,15 @@ export class OkeyGame implements GameInstance {
         if (this.katlamali) {
           // Each of çift and okey doubles what the others lose: 2, 4 or 8.
           const loss = 2 * (pairs ? 2 : 1) * (okeyThrown ? 2 : 1);
-          const deltas = this.seats.map((_, s) => (s === seat ? 0 : -loss));
-          this.endRound(seat, deltas, `${this.name(seat)} ${how ? how + " " : ""}bitirdi, herkes ${loss} puan kaybetti.`, rest);
+          const deltas = this.seats.map((_, s) => ((this.esli ? s % 2 === seat % 2 : s === seat) ? 0 : -loss));
+          const losers = this.esli ? "rakipler" : "herkes";
+          this.endRound(seat, deltas, `${this.name(seat)} ${how ? how + " " : ""}bitirdi, ${losers} ${loss} puan kaybetti.`, rest);
         } else {
           const points = pairs || okeyThrown ? 4 : 2;
           const deltas = [0, 0, 0, 0];
           deltas[seat] = points;
+          // Partners keep one shared score.
+          if (this.esli) deltas[(seat + 2) % 4] = points;
           this.endRound(seat, deltas, `${this.name(seat)} ${how ? how + " " : ""}bitirdi (+${points}).`, rest);
         }
         return;
@@ -318,6 +327,14 @@ export class OkeyGame implements GameInstance {
     deltas.forEach((d, s) => (this.scores[s] += d));
     this.lastRound = { winnerId: winner === null ? null : this.seats[winner], deltas, note, winningHand };
     this.phase = "roundOver";
+  }
+
+  /**
+   * A team's score in eşli. In okey partners always gain and lose together, so
+   * either seat holds it; in 101 the two players' penalties add up.
+   */
+  private teamScore(team: number) {
+    return this.variant === "okey" ? this.scores[team] : this.scores[team] + this.scores[team + 2];
   }
 
   private isGameOver() {

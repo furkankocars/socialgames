@@ -33,6 +33,18 @@ const TURN_TIME: Option = {
   initial: 0,
 };
 
+const ESLI: Option = {
+  key: "esli",
+  label: "Eşli",
+  toggle: true,
+  choices: ON_OFF,
+  initial: 0,
+  hint: (v) =>
+    v.esli
+      ? "Karşılıklı oturanlar eş olur: listede 1. ile 3., 2. ile 4. sıradakiler. Puan takım olarak sayılır."
+      : "Herkes kendi adına oynar.",
+};
+
 const OPTIONS: Record<GameId, Option[]> = {
   tabu: [
     { key: "roundSeconds", label: "Tur süresi", choices: nums([45, 60, 90, 120], " sn"), initial: 60 },
@@ -63,9 +75,10 @@ const OPTIONS: Record<GameId, Option[]> = {
       initial: 1,
       hint: (v) => `Göstergenin eşini ilk turunda gösteren ${v.katlamali ? "diğerlerine 1 puan kaybettirir" : "1 puan alır"}.`,
     },
+    ESLI,
     TURN_TIME,
   ],
-  okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, TURN_TIME],
+  okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, ESLI, TURN_TIME],
 };
 
 const OPTIONS_KEY = "socialgames.options";

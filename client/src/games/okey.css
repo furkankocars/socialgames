@@ -751,3 +751,18 @@ button.wood:active:not(:disabled) {
     radial-gradient(circle at 50% 50%, transparent 26%, rgb(0 0 0 / 0.07) 28%, transparent 31%),
     linear-gradient(160deg, #f6eedb, #ddcfae);
 }
+
+/* Eşli: team totals on top, each player's share below in smaller type. */
+.scores.teams td {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+.scores.players {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+.seat-tag.partner {
+  background: #f0c75e;
+  color: var(--ink);
+}

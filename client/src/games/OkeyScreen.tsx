@@ -299,6 +299,7 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         <span className="seat-name">
           {name}
           {player?.bot && <span className="seat-tag">bot</span>}
+          {g.esli && index === (mySeat + 2) % 4 && <span className="seat-tag partner">eşin</span>}
         </span>
         {turn && turnEndsAt && <span className={`seat-clock ${secondsLeft <= 5 ? "low" : ""}`}>{secondsLeft} sn</span>}
         <span className="seat-meta">
@@ -541,7 +542,19 @@ export function OkeyScreen({ room }: { room: RoomView }) {
           Puanlar {is101 && <span className="muted small">(az olan kazanır)</span>}
           {g.katlamali && <span className="muted small">(sıfıra düşen olunca oyun biter)</span>}
         </h4>
-        <table className="scores">
+        {g.teamScores && (
+          <table className="scores teams">
+            <tbody>
+              {g.teamScores.map((score, team) => (
+                <tr key={team} className={team === mySeat % 2 ? "me" : ""}>
+                  <td>{teamName(room, g, team)}</td>
+                  <td>{score}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <table className={`scores ${g.esli ? "players" : ""}`}>
           <tbody>
             {g.seats.map((s, i) => (
               <tr key={s.id} className={i === mySeat ? "me" : ""}>
@@ -561,7 +574,17 @@ export function OkeyScreen({ room }: { room: RoomView }) {
   );
 }
 
+function teamName(room: RoomView, g: OkeyView, team: number) {
+  return `${nameOf(room, g.seats[team].id)} & ${nameOf(room, g.seats[team + 2].id)}`;
+}
+
 function winnerName(room: RoomView, g: OkeyView) {
+  if (g.teamScores) {
+    const [a, b] = g.teamScores;
+    const lowWins = g.variant === "okey101";
+    if (a === b) return `${teamName(room, g, 0)} ile ${teamName(room, g, 1)} berabere`;
+    return teamName(room, g, (lowWins ? a < b : a > b) ? 0 : 1);
+  }
   const scores = g.seats.map((s) => s.score);
   const best = g.variant === "okey101" ? Math.min(...scores) : Math.max(...scores);
   return g.seats
