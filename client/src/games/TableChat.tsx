@@ -229,3 +229,8 @@ export function useSeatChat(room: RoomView): { treat: (playerId: string) => Trea
     bubble: (playerId) => newestFirst.find((c) => c.text && c.from === playerId && recent(c, BUBBLE_SHOW_MS)) ?? null,
   };
 }
+
+/** The drink currently shown on each seat; for screens without chat bubbles. */
+export function useSeatTreats(room: RoomView): (playerId: string) => Treat | null {
+  return useSeatChat(room).treat;
+}
