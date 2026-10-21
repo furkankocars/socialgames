@@ -20,9 +20,11 @@ export function TabuScreen({ room }: { room: RoomView }) {
     <div className="tabu-scores">
       {[0, 1].map((t) => (
         <div key={t} className={`team team-${t} ${g.activeTeam === t && g.phase !== "setup" ? "active" : ""}`}>
-          <div className="team-name">{TEAM_NAMES[t]}</div>
-          <div className="team-score">{g.scores[t]}</div>
-          <div className="small">{g.teams[t].map((id) => nameOf(room, id)).join(", ")}</div>
+          <div className="team-head">
+            <span className="team-name">{TEAM_NAMES[t]}</span>
+            <span className="team-score">{g.scores[t]}</span>
+          </div>
+          <div className="team-members">{g.teams[t].map((id) => nameOf(room, id)).join(", ")}</div>
         </div>
       ))}
     </div>
@@ -32,8 +34,8 @@ export function TabuScreen({ room }: { room: RoomView }) {
     return (
       <div className="stack">
         {scoreboard}
-        <div className="card stack">
-          <p>Takımları ayarlayın. Herkes kendi takımını değiştirebilir.</p>
+        <div className="stack">
+          <p>Takımlar rastgele dağıtıldı. İsteyen kendi takımını değiştirebilir.</p>
           <button onClick={() => send({ type: "switchTeam" })}>Takımımı değiştir</button>
           {isHost && (
             <div className="row">
@@ -55,8 +57,8 @@ export function TabuScreen({ room }: { room: RoomView }) {
     return (
       <div className="stack">
         {scoreboard}
-        <div className="card center">
-          <h2>{a === b ? "Berabere!" : `${TEAM_NAMES[a > b ? 0 : 1]} kazandı! 🎉`}</h2>
+        <div>
+          <h2>{a === b ? "Berabere." : `${TEAM_NAMES[a > b ? 0 : 1]} kazandı.`}</h2>
           <p className="muted">Oda sahibi lobiye dönüp yeni oyun açabilir.</p>
         </div>
       </div>
@@ -80,11 +82,11 @@ export function TabuScreen({ room }: { room: RoomView }) {
     return (
       <div className="stack">
         {scoreboard}
-        <div className="card center stack">
+        <div className="stack">
           <p className="muted">
-            Tur {g.round}/{g.totalRounds} · {TEAM_NAMES[g.activeTeam]}
+            Tur {g.round}/{g.totalRounds} · {TEAM_NAMES[g.activeTeam]} anlatıyor
           </p>
-          <h3>Anlatıcı: {nameOf(room, g.narratorId)}</h3>
+          <h3>{isNarrator ? "Sıra sende. Kartı sadece sen ve rakip takım göreceksiniz." : `Anlatıcı: ${nameOf(room, g.narratorId)}`}</h3>
           {isNarrator ? (
             <button className="primary big" onClick={() => send({ type: "startTurn" })}>
               Hazırım, başlat ({g.roundSeconds} sn)
@@ -102,7 +104,12 @@ export function TabuScreen({ room }: { room: RoomView }) {
   return (
     <div className="stack">
       {scoreboard}
-      <div className={`timer ${secondsLeft <= 10 ? "low" : ""}`}>{secondsLeft}</div>
+      <div className={`timebar ${secondsLeft <= 10 ? "low" : ""}`}>
+        <div className="timebar-track">
+          <div className="timebar-fill" style={{ width: `${(secondsLeft / g.roundSeconds) * 100}%` }} />
+        </div>
+        <span>{secondsLeft} sn</span>
+      </div>
       {g.card ? (
         <div className="tabu-card">
           <div className="tabu-word">{g.card.word}</div>
@@ -113,9 +120,9 @@ export function TabuScreen({ room }: { room: RoomView }) {
           </ul>
         </div>
       ) : (
-        <div className="card center">
-          <h3>Tahmin et!</h3>
-          <p>{nameOf(room, g.narratorId)} anlatıyor.</p>
+        <div className="guess-panel">
+          <h3>Tahmin et</h3>
+          <p>{nameOf(room, g.narratorId)} anlatıyor, kart sende görünmez.</p>
         </div>
       )}
       {isNarrator && (
@@ -133,7 +140,7 @@ export function TabuScreen({ room }: { room: RoomView }) {
       )}
       {opposing && (
         <button className="danger big" onClick={() => send({ type: "taboo" })}>
-          Tabu! Yasaklı kelime söylendi
+          Tabu: yasaklı kelime söylendi
         </button>
       )}
       {log}

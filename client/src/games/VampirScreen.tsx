@@ -12,8 +12,6 @@ const ROLE_HELP: Record<VampirRole, string> = {
   gozcu: "Her gece bir kişinin vampir olup olmadığını öğren.",
 };
 
-const ROLE_ICON: Record<VampirRole, string> = { vampir: "🧛", koylu: "🧑‍🌾", doktor: "🩺", gozcu: "🔮" };
-
 export function VampirScreen({ room }: { room: RoomView }) {
   const g = room.game as VampirView;
   const act = useAct();
@@ -26,12 +24,16 @@ export function VampirScreen({ room }: { room: RoomView }) {
     <button className={`role-card ${revealed ? "open" : ""} role-${role}`} onClick={() => setRevealed(!revealed)}>
       {revealed ? (
         <>
-          <span className="role-icon">{ROLE_ICON[role]}</span>
-          <strong>{VAMPIR_ROLE_NAMES[role]}</strong>
-          <span className="small">{ROLE_HELP[role]}</span>
+          <span className="small">Rolün</span>
+          <span className="role-name">{VAMPIR_ROLE_NAMES[role]}</span>
+          <span>{ROLE_HELP[role]}</span>
+          <span className="small">Gizlemek için dokun.</span>
         </>
       ) : (
-        <span>Rolünü görmek için dokun (kimse bakmasın 👀)</span>
+        <>
+          <strong>Rolünü görmek için dokun</strong>
+          <span className="small muted">Ekranına kimsenin bakmadığından emin ol.</span>
+        </>
       )}
     </button>
   );
@@ -50,13 +52,12 @@ export function VampirScreen({ room }: { room: RoomView }) {
             onClick={() => onPick?.(p.id)}
           >
             <span>
-              {p.alive ? "" : "💀 "}
               {nameOf(room, p.id)}
               {p.id === room.you && " (sen)"}
             </span>
             {p.role && p.id !== room.you && <span className="small">{VAMPIR_ROLE_NAMES[p.role]}</span>}
             {voteCount > 0 && <span className="badge">{voteCount} oy</span>}
-            {vampireMarks > 0 && <span className="badge red">🧛 {vampireMarks}</span>}
+            {vampireMarks > 0 && <span className="badge">{vampireMarks} vampir seçti</span>}
           </button>
         );
       })}
@@ -66,16 +67,17 @@ export function VampirScreen({ room }: { room: RoomView }) {
   let action: React.ReactNode = null;
   if (g.phase === "finished") {
     action = (
-      <div className="card center">
-        <h2>{g.winner === "koy" ? "Köy kazandı! 🧑‍🌾" : "Vampirler kazandı! 🧛"}</h2>
+      <div className="phase-panel">
+        <h2>{g.winner === "koy" ? "Köy kazandı." : "Vampirler kazandı."}</h2>
+        <p className="muted">Herkesin rolü açıldı.</p>
         {playerGrid(null, null)}
       </div>
     );
   } else if (!g.alive) {
     action = (
-      <div className="card">
-        <h3>💀 Öldün</h3>
-        <p className="muted">Artık izleyicisin, rolleri görebilirsin ama kimseye söyleme!</p>
+      <div className="phase-panel">
+        <h3>Öldün</h3>
+        <p className="muted">Artık izleyicisin. Rolleri görebilirsin ama kimseye söyleme.</p>
         {playerGrid(null, null)}
       </div>
     );
@@ -84,8 +86,8 @@ export function VampirScreen({ room }: { room: RoomView }) {
     const exclude = role === "vampir" ? (id: string) => g.players.find((p) => p.id === id)?.role === "vampir" : role === "gozcu" ? (id: string) => id === room.you : undefined;
     const seerDone = role === "gozcu" && !g.mustAct;
     action = (
-      <div className="card night">
-        <h3>🌙 {g.day}. gece</h3>
+      <div className="phase-panel night">
+        <h3>{g.day}. gece</h3>
         {!canAct && <p>Gözlerini kapat. Sabahı bekle…</p>}
         {role === "vampir" && <p>Kimi ısıracaksınız? Diğer vampirlerle anlaşın.</p>}
         {role === "doktor" && <p>Bu gece kimi koruyacaksın?</p>}
@@ -97,8 +99,8 @@ export function VampirScreen({ room }: { room: RoomView }) {
   } else {
     const myVote = g.votes[room.you];
     action = (
-      <div className="card">
-        <h3>☀️ {g.day}. gün</h3>
+      <div className="phase-panel">
+        <h3>{g.day}. gün</h3>
         <p>Tartışın ve kimin asılacağını oylayın. Oylar herkes oy verince sayılır.</p>
         {playerGrid((id) => send({ type: "vote", targetId: id }), myVote ?? null)}
         <button className={`wide ${myVote === null ? "selected" : ""}`} onClick={() => send({ type: "vote", targetId: null })}>
@@ -116,11 +118,11 @@ export function VampirScreen({ room }: { room: RoomView }) {
       {roleCard}
       {role === "gozcu" && g.seerResults.length > 0 && (
         <div className="card">
-          <h4>🔮 Öğrendiklerin</h4>
+          <h4>Gözcü notların</h4>
           <ul>
             {g.seerResults.map((r, i) => (
               <li key={i}>
-                {nameOf(room, r.targetId)}: {r.isVampire ? "🧛 Vampir" : "Vampir değil"}
+                {nameOf(room, r.targetId)}: <strong>{r.isVampire ? "Vampir" : "vampir değil"}</strong>
               </li>
             ))}
           </ul>

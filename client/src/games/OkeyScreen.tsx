@@ -113,10 +113,10 @@ export function OkeyScreen({ room }: { room: RoomView }) {
     return (
       <div className={`opponent ${position} ${g.turn === seat && g.phase !== "roundOver" ? "turn" : ""}`}>
         <div className="opp-name">
-          {nameOf(room, s.id)} {g.dealer === seat && "🎯"}
+          {nameOf(room, s.id)}
         </div>
         <div className="small muted">
-          {s.handCount} taş · {s.score} puan
+          {s.handCount} taş · {s.score} puan{g.dealer === seat && " · dağıttı"}
           {is101 && g.opened[seat] && ` · ${g.opened[seat] === "pairs" ? "çiftten" : ""} açtı`}
         </div>
         {last && <TileFace tile={last} okey={g.okey} small />}
@@ -181,6 +181,30 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         </div>
       )}
 
+      {g.phase === "roundOver" && g.lastRound && (
+        <div className="round-over">
+          <div className="stack">
+            <h3>{g.gameOver ? "Oyun bitti" : "El bitti"}</h3>
+            <p>{g.lastRound.note}</p>
+            {g.lastRound.winningHand && g.lastRound.winningHand.length > 0 && (
+              <div className="tile-row">
+                {g.lastRound.winningHand.map((t) => (
+                  <TileFace key={t.id} tile={t} okey={g.okey} small />
+                ))}
+              </div>
+            )}
+            {g.gameOver && <h3>Kazanan: {winnerName(room, g)}</h3>}
+            {!g.gameOver &&
+              (room.hostId === room.you ? (
+                <button className="primary" onClick={() => send({ type: "nextRound" })}>
+                  Sonraki el
+                </button>
+              ) : (
+                <p className="muted">Oda sahibinin yeni eli başlatması bekleniyor…</p>
+              ))}
+          </div>
+        </div>
+      )}
       <div className={`okey-status ${myTurn ? "mine" : ""}`}>{status}</div>
 
       <div className="rack" onDragOver={(e) => e.preventDefault()}>
@@ -260,30 +284,6 @@ export function OkeyScreen({ room }: { room: RoomView }) {
         </table>
       </div>
 
-      {g.phase === "roundOver" && g.lastRound && (
-        <div className="modal">
-          <div className="card stack center">
-            <h3>{g.gameOver ? "Oyun bitti!" : "El bitti"}</h3>
-            <p>{g.lastRound.note}</p>
-            {g.lastRound.winningHand && g.lastRound.winningHand.length > 0 && (
-              <div className="tile-row">
-                {g.lastRound.winningHand.map((t) => (
-                  <TileFace key={t.id} tile={t} okey={g.okey} small />
-                ))}
-              </div>
-            )}
-            {g.gameOver && <h3>Kazanan: {winnerName(room, g)} 🏆</h3>}
-            {!g.gameOver &&
-              (room.hostId === room.you ? (
-                <button className="primary" onClick={() => send({ type: "nextRound" })}>
-                  Sonraki el
-                </button>
-              ) : (
-                <p className="muted">Oda sahibinin yeni eli başlatması bekleniyor…</p>
-              ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

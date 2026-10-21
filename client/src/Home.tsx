@@ -17,53 +17,70 @@ export function Home() {
     fn(trimmed);
   };
 
+  const join = () =>
+    withName(async (n) => {
+      if (code.trim().length !== 4) return toast("Oda kodu 4 karakter.");
+      const res = await act(request("room:join", { code, name: n }));
+      if (res.ok) history.replaceState(null, "", "/");
+    });
+
   return (
     <div className="home">
-      <h1>🎲 Sosyal Oyunlar</h1>
-      <p className="muted">Arkadaşlarınla bir oda aç, kodu paylaş, birlikte oynayın.</p>
+      <h1>Sosyal Oyunlar</h1>
+      <p className="home-intro">
+        {initialCode ? `${initialCode} odasına davet edildin. İsmini yaz ve katıl.` : "Biri oda açar, kodu paylaşır, herkes kendi telefonundan katılır."}
+      </p>
 
-      <div className="card stack">
+      <form
+        className="home-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          join();
+        }}
+      >
         <label>
           İsmin
-          <input value={name} maxLength={20} onChange={(e) => setName(e.target.value)} placeholder="Örn. Furkan" autoFocus={!name} />
+          <input value={name} maxLength={20} onChange={(e) => setName(e.target.value)} placeholder="Masada görünecek isim" autoFocus={!name} />
         </label>
 
-        {initialCode ? null : (
-          <button className="primary" onClick={() => withName((n) => act(request("room:create", { name: n })))}>
-            Yeni oda aç
-          </button>
-        )}
-
-        <div className="join-row">
-          <input
-            value={code}
-            maxLength={4}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="Oda kodu"
-            className="code-input"
-          />
-          <button
-            className={initialCode ? "primary" : ""}
-            onClick={() =>
-              withName(async (n) => {
-                const res = await act(request("room:join", { code, name: n }));
-                if (res.ok) history.replaceState(null, "", "/");
-              })
-            }
-          >
-            Katıl
-          </button>
-        </div>
-      </div>
-
-      <div className="game-list">
-        {GAMES.map((g) => (
-          <div key={g.id} className="game-chip">
-            <strong>{g.name}</strong>
-            <span className="muted small">{g.description}</span>
+        <label>
+          Oda kodu
+          <div className="join-row">
+            <input
+              value={code}
+              maxLength={4}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="ABCD"
+              className="code-input"
+              autoCapitalize="characters"
+              autoComplete="off"
+            />
+            <button type="submit" className={initialCode ? "primary" : ""}>
+              Katıl
+            </button>
           </div>
+        </label>
+
+        {!initialCode && (
+          <>
+            <div className="or">ya da</div>
+            <button type="button" className="primary big" onClick={() => withName((n) => act(request("room:create", { name: n })))}>
+              Yeni oda aç
+            </button>
+          </>
+        )}
+      </form>
+
+      <h4>Masadaki oyunlar</h4>
+      <ul className="menu">
+        {GAMES.map((g) => (
+          <li key={g.id}>
+            <strong>{g.name}</strong>
+            <span className="count">{g.minPlayers === g.maxPlayers ? `${g.minPlayers} kişi` : `${g.minPlayers}–${g.maxPlayers} kişi`}</span>
+            <span className="desc">{g.description}</span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }
