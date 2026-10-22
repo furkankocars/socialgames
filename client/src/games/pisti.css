@@ -663,3 +663,152 @@
     display: none;
   }
 }
+
+/*
+ * Phone held sideways, as in the Pişti apps: the felt fills the height,
+ * opponents sit compact around the pile, and your hand rests on the wood
+ * rail along the bottom with the play button at its end.
+ */
+@media (orientation: landscape) and (max-height: 540px) {
+  .pisti {
+    --cw: 40px;
+    --ch: 56px;
+    --lg-w: 52px;
+    --lg-h: 74px;
+    height: var(--stage-h);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "hud hud"
+      "table table"
+      "me actions";
+    gap: 6px 8px;
+  }
+  .pisti-hud {
+    grid-area: hud;
+    flex-wrap: nowrap;
+    font-size: 0.85rem;
+  }
+  .pisti-table {
+    grid-area: table;
+    min-height: 0;
+    display: flex;
+    padding: 6px;
+    border-radius: 14px;
+  }
+  .pisti-felt {
+    flex: 1;
+    min-height: 0;
+    padding: 6px 10px;
+    gap: 2px 8px;
+  }
+  .pisti-felt:not(.n2) {
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "left top right"
+      "left center right"
+      "status status status";
+  }
+  .pisti-felt:not(.n2) .pseat.top {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    grid-template-areas:
+      "av name hand clock"
+      "av meta hand clock";
+    gap: 0 8px;
+    align-items: center;
+    text-align: left;
+  }
+  .pseat.top .pseat-avatar {
+    grid-area: av;
+  }
+  .pseat.top .pseat-name {
+    grid-area: name;
+  }
+  .pseat.top .pseat-meta {
+    grid-area: meta;
+  }
+  .pseat.top .pseat-hand {
+    grid-area: hand;
+  }
+  .pseat.top .pseat-clock {
+    grid-area: clock;
+  }
+  .pisti-felt.n2 {
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-areas:
+      "top center ."
+      "status status status";
+    grid-template-rows: 1fr auto;
+  }
+  .pseat.top {
+    align-self: start;
+  }
+  .pseat .avatar {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 12px !important;
+  }
+  .pseat-name {
+    font-size: 0.8rem;
+  }
+  .pseat-meta {
+    font-size: 0.66rem;
+  }
+  .pseat-hand {
+    margin-top: 2px;
+  }
+  .pisti-center {
+    padding: 0;
+    gap: 22px;
+    align-items: center;
+  }
+  .pisti-deck .plabel {
+    display: none;
+  }
+  .pstatus {
+    padding: 0.2rem 0.6rem;
+    font-size: 0.78rem;
+  }
+  .pisti-me {
+    grid-area: me;
+    flex-wrap: nowrap;
+    padding: 6px 10px 8px;
+    gap: 0.9rem;
+    border-radius: 12px;
+  }
+  .pisti-me .pseat {
+    flex-direction: row;
+    gap: 6px;
+  }
+  .pisti-me .pseat-name,
+  .pisti-me .pseat-meta {
+    display: none;
+  }
+  .pisti-hand {
+    gap: 6px;
+  }
+  .pisti-hand .pcard.selected {
+    translate: 0 -8px;
+  }
+  .pisti-actions {
+    grid-area: actions;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .pisti-actions .muted {
+    display: none;
+  }
+  .pisti-actions .chunky {
+    padding: 0.6rem 0.9rem;
+    height: 100%;
+  }
+  .pile-cards.to-me {
+    --dy: 110px;
+  }
+  .pile-cards.to-top {
+    --dy: -90px;
+  }
+}

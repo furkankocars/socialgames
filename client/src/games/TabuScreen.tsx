@@ -182,7 +182,7 @@ function TabuStage({ room }: { room: RoomView }) {
   const opposing = myTeam !== null && myTeam !== g.activeTeam;
   const correctCount = g.log.filter((l) => l.result === "correct").length;
   return (
-    <div className="tabu">
+    <div className="tabu playing">
       {scoreboard}
       <div className="turn-bar">
         <span className="turn-meta">
@@ -230,7 +230,7 @@ function TabuStage({ room }: { room: RoomView }) {
         </div>
       )}
       {opposing && (
-        <button className="chunky danger big wide" onClick={() => send({ type: "taboo" })}>
+        <button className="chunky danger big wide tabu-buzz" onClick={() => send({ type: "taboo" })}>
           Tabu: yasaklı kelime söylendi
         </button>
       )}

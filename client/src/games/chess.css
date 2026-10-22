@@ -470,3 +470,102 @@ button.move-san.latest {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+
+/* The moves in one scrolling line over the board, for screens without the side sheet open. */
+.move-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 2px;
+  display: flex;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.move-strip li {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+.move-strip .move-n {
+  padding: 0 0.15rem 0 0.4rem;
+  font-size: 0.85rem;
+}
+.move-strip button.move-san {
+  padding: 0.15rem 0.35rem;
+  font-size: 0.92rem;
+}
+@media (min-width: 1080px) {
+  .move-strip {
+    display: none;
+  }
+}
+
+/* Phone held sideways: the board fills the height, plates and controls beside it. */
+@media (orientation: landscape) and (max-height: 540px) {
+  .chess {
+    max-width: none;
+    height: var(--stage-h);
+    display: grid;
+    grid-template-columns: var(--stage-h) minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "board top"
+      "board status"
+      "board offer"
+      "board actions"
+      "board hud"
+      "board bottom";
+    gap: 6px 0.75rem;
+  }
+  .chess-main {
+    display: contents;
+  }
+  .chess-table {
+    grid-area: board;
+    padding: 6px;
+    align-self: start;
+  }
+  .chess-plate.top {
+    grid-area: top;
+  }
+  .chess-plate.bottom {
+    grid-area: bottom;
+  }
+  .chess-hud {
+    grid-area: hud;
+    align-self: end;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+  }
+  /* The moves tab sits right beside the board here. */
+  .move-strip {
+    display: none;
+  }
+  .chess-status {
+    grid-area: status;
+    font-size: 0.95rem;
+    padding: 0.35rem 0.6rem;
+  }
+  .draw-offer {
+    grid-area: offer;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.9rem;
+  }
+  .chess-actions {
+    grid-area: actions;
+  }
+  .chess-actions button {
+    padding: 0.35rem 0.7rem;
+    font-size: 0.88rem;
+  }
+  .chess-plate {
+    padding: 4px 6px;
+    gap: 0.45rem;
+  }
+  .plate-clock {
+    font-size: 1rem;
+    padding: 0.2rem 0.45rem;
+  }
+}

@@ -265,6 +265,11 @@ export function ChessScreen({ room }: { room: RoomView }) {
   useEffect(() => {
     list.current?.scrollTo({ top: list.current.scrollHeight });
   }, [moveCount]);
+  // The strip over the board on a phone, as on Chess.com: keep the shown move in view.
+  const strip = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    strip.current?.querySelector(".latest")?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [at]);
 
   const stage = (
     <div className="chess" data-drag-layer>
@@ -276,6 +281,19 @@ export function ChessScreen({ room }: { room: RoomView }) {
         </span>
         <TreatTray />
       </div>
+
+      {pairs.length > 0 && (
+        <ol className="move-strip" ref={strip} aria-label="Hamleler">
+          {g.moves.map((m, i) => (
+            <li key={i}>
+              {i % 2 === 0 && <span className="move-n">{i / 2 + 1}.</span>}
+              <button className={`move-san ${i + 1 === at ? "latest" : ""}`} onClick={() => goTo(i + 1)}>
+                {m.san}
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
 
       <div className="chess-main">
         {plate(top, "top")}

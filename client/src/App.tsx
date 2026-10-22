@@ -1,4 +1,4 @@
-import { GAMES } from "../../shared/protocol";
+import { GAMES, type GameId } from "../../shared/protocol";
 import { request, useConnection } from "./socket";
 import { ToastProvider, useAct } from "./toast";
 import { Home } from "./Home";
@@ -10,8 +10,12 @@ import { ChessScreen } from "./games/ChessScreen";
 import { PistiScreen } from "./games/PistiScreen";
 import { CasusScreen } from "./games/CasusScreen";
 import { setSound, useSoundEnabled } from "./sound";
+import { FullscreenButton } from "./Fullscreen";
 import { BrandMark } from "./BrandMark";
 import { Guide, useGuideRoute } from "./Guide";
+
+/** Card and tile tables that play best sideways, as the app versions do. */
+const LANDSCAPE_GAMES: GameId[] = ["okey", "okey101", "pisti"];
 
 export function App() {
   return (
@@ -56,6 +60,7 @@ function Main() {
           </span>
         </div>
         <div className="topbar-actions">
+          {playing && <FullscreenButton landscape={LANDSCAPE_GAMES.includes(room.selectedGame)} />}
           {playing && (
             <button className="bar-btn" aria-pressed={sound} onClick={() => setSound(!sound)} title={sound ? "Sesi kapat" : "Sesi aç"}>
               <SoundIcon on={sound} />
