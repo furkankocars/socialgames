@@ -19,6 +19,7 @@ Arkadaş grubuyla tarayıcıdan oynanan masa ve grup oyunları. Biri oda açar, 
 | 101 Okey | 4 | Var | 101 sayıyla ya da 5 çiftle el aç, masadaki gruplara işle. Yandan alınan taş o el kullanılmalı. Bitiren -101, açamayan 202 ceza alır. Çiftten ya da okeyle bitişte cezalar iki katı. Az puan kazanır. |
 | Satranç | 2 | Var | Tam kurallar: rok, geçerken alma, terfi, mat, pat, üç tekrar, 50 hamle, yetersiz taş. Satranç saati, hamle başı ek süre, beraberlik teklifi, renk değiştiren rövanş. Hamle listesinden ya da ok tuşlarıyla geçmiş konumlara dönülür. Kolay, orta ve zor bot. |
 | Pişti | 2 ya da 4 | Var | Yerdeki üst kartla aynı kartı ya da vale atan yerdeki kartları alır. Tek karta aynısı pişti (10), valeye vale 20. El sonunda kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1. 4 kişide eşli oynanabilir. |
+| Casus | 3-16 | Yok | Herkese aynı gizli kelime gelir, casusa gelmez. Kategori seçilir (Tümü, Ülke, Şehir, Eşya, Aktivite, Meslek, Yemek, Hayvan, Spor, Yabancı Ünlü, Mekan). Sırayla soru sorulur, sonra gizli oylama; yakalanan casus kelimeyi listeden tahmin ederse yine kazanır. 1-3 casus, soru süresi ve tur sayısı lobide seçilir. |
 
 Her oyun ekranında masa solda, yanında (telefonda altında) sekmeler durur: oyunun kendi paneli (puanlar, hamleler, köy defteri ya da tur kaydı), masa sohbeti ve o oyunun kuralları.
 

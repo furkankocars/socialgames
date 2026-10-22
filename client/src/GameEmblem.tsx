@@ -87,6 +87,15 @@ export function GameEmblem({ game, size = 56 }: { game: GameId; size?: number })
           </g>
         </>
       )}
+      {game === "casus" && (
+        <>
+          <path d="M10 14h16l4 5h24v37H10Z" className="e-folder" />
+          <path d="M20 26c.6-3.6 1.4-6.4 3-7 1.3-.5 2.7 1 4.5 1s3.2-1.5 4.5-1c1.6.6 2.4 3.4 3 7" className="e-hat" />
+          <path d="M14 27.5c4 1.8 8.6 2.6 13.5 2.6S37 29.3 41 27.5" className="e-spy" />
+          <path d="M21.5 31c0 5 2.7 8.5 6 8.5s6-3.5 6-8.5M22 37.5l-5 4.5v6h21v-6l-5-4.5" className="e-spy" />
+          <rect x="40" y="38" width="12" height="9" rx="1" transform="rotate(-10 46 42)" className="e-stamp" />
+        </>
+      )}
     </svg>
   );
 }

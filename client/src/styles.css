@@ -384,6 +384,30 @@ label.row select {
 .e-window {
   fill: var(--brass);
 }
+.e-folder {
+  fill: #d4b07d;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.e-hat {
+  fill: var(--ink);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.e-spy {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.e-stamp {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+}
 .e-knight {
   fill: var(--tile);
   stroke: var(--ink);
