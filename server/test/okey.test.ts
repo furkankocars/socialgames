@@ -166,6 +166,53 @@ describe("101 Okey", () => {
     game.handleAction(next, { type: "drawCenter" });
     game.handleAction(next, { type: "discard", tileId: other.id });
   });
+
+  it("only opens with a tile taken from the side when that tile is among the groups", () => {
+    const { game, dealerId, dealer } = newGame("okey101", [...opening, ["blue", 2]]);
+    const next = `p${(dealer + 1) % 4}`;
+    // The dealer throws the blue 2; the next player rigs a hand that opens without it.
+    const two = game.getView(dealerId).hand.find((t) => t.color === "blue" && t.value === 2)!;
+    game.handleAction(dealerId, { type: "discard", tileId: two.id });
+    const g = game as unknown as { hands: Tile[][] };
+    const seat = (dealer + 1) % 4;
+    const [mine, theirs] = [g.hands[seat], g.hands[dealer]];
+    // Swap hands so the opening tiles are the next player's.
+    g.hands[seat] = theirs;
+    g.hands[dealer] = mine;
+    game.handleAction(next, { type: "drawDiscard" });
+    const hand = game.getView(next).hand;
+    const ids = (pred: (t: Tile) => boolean) => hand.filter(pred).map((t) => t.id);
+    const run = ids((t) => t.color === "red" && t.value >= 10);
+    const tens = ids((t) => t.value === 10 && t.color !== "red").slice(0, 3);
+    const elevens = ids((t) => t.value === 11 && t.color !== "red").slice(0, 3);
+    expect(() => game.handleAction(next, { type: "open", groups: [run, tens, elevens] })).toThrow(/Yandan/);
+  });
+
+  it("writes 101 for throwing the okey or a tile that fits the table, unless turned off", () => {
+    const withNine: [TileColor | null, number][] = [...opening, ["red", 9], ["black", 7]];
+    for (const cezalar of [1, 0]) {
+      const { game, dealerId, dealer } = newGame("okey101", withNine, { rounds: 2, cezalar });
+      const hand = game.getView(dealerId).hand;
+      const ids = (pred: (t: Tile) => boolean) => hand.filter(pred).map((t) => t.id);
+      game.handleAction(dealerId, {
+        type: "open",
+        groups: [
+          ids((t) => t.color === "red" && t.value >= 10),
+          ids((t) => t.value === 10 && t.color !== "red").slice(0, 3),
+          ids((t) => t.value === 11 && t.color !== "red").slice(0, 3),
+        ],
+      });
+      const nine = ids((t) => t.color === "red" && t.value === 9)[0];
+      game.handleAction(dealerId, { type: "discard", tileId: nine });
+      expect(game.getView(dealerId).seats[dealer].score).toBe(cezalar ? 101 : 0);
+      expect(game.getView(dealerId).penalties).toBe(cezalar === 1);
+    }
+    const { game, dealerId, dealer } = newGame("okey101", [["black", 7]]);
+    const okeyId = game.getView(dealerId).hand.find((t) => t.color === "black" && t.value === 7)!.id;
+    game.handleAction(dealerId, { type: "discard", tileId: okeyId });
+    expect(game.getView(dealerId).seats[dealer].score).toBe(101);
+    expect(game.getView(dealerId).notice).toMatch(/okeyi attı/);
+  });
 });
 
 describe("Eşli", () => {

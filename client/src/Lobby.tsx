@@ -102,7 +102,19 @@ const OPTIONS: Record<GameId, Option[]> = {
     ESLI,
     TURN_TIME,
   ],
-  okey101: [{ key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 }, ESLI, TURN_TIME],
+  okey101: [
+    { key: "rounds", label: "El sayısı", choices: nums([1, 2, 3, 4, 5]), initial: 3 },
+    {
+      key: "cezalar",
+      label: "Okey ve işlek taş cezası",
+      toggle: true,
+      choices: ON_OFF,
+      initial: 1,
+      hint: (v) => (v.cezalar ? "Okeyi ya da masadaki bir gruba işlenebilecek taşı atan 101 ceza yazar." : "Taş atmanın cezası yok."),
+    },
+    ESLI,
+    TURN_TIME,
+  ],
   chess: [
     {
       key: "minutes",

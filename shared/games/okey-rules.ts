@@ -247,16 +247,103 @@ function leaveOne(groups: Tile[][], handSize: number, okey: Okey): Tile[][] {
 
 export type AutoLay = { groups: number[][]; how: "series" | "pairs"; points: number } | { groups: null; points: number; pairs: number };
 
-/** 101: the groups to open with (or lay down later) without picking tiles by hand. */
-export function autoLay(hand: Tile[], okey: Okey, opened: "series" | "pairs" | null): AutoLay {
-  const series = leaveOne(bestGroups(hand, okey).groups, hand.length, okey);
+/** Runs and sets that use `must`, built from the tiles that could sit next to it. */
+function groupsWith(must: Tile, hand: Tile[], okey: Okey): Tile[][] {
+  const others = hand.filter((t) => t.id !== must.id);
+  const wilds = others.filter((t) => isWild(t, okey));
+  const out: Tile[][] = [];
+  if (isWild(must, okey)) {
+    // An okey fits anywhere: try it in each group the rest of the hand makes.
+    for (const g of bestGroups(others, okey).groups) {
+      const r = analyzeGroup([...g, must], okey);
+      if (r) out.push(r.ordered);
+    }
+    return out;
+  }
+  const m = effective(must, okey);
+  // Sets: one tile of each other colour of this value, okeys filling in.
+  const byColor = new Map<string, Tile>();
+  for (const t of others) {
+    if (isWild(t, okey)) continue;
+    const e = effective(t, okey);
+    if (e.value === m.value && e.color !== m.color && !byColor.has(e.color)) byColor.set(e.color, t);
+  }
+  const mates = [...byColor.values()];
+  for (let mask = 0; mask < 1 << mates.length; mask++) {
+    const chosen = mates.filter((_, i) => mask & (1 << i));
+    for (let w = 0; w <= Math.min(wilds.length, 3 - chosen.length); w++) {
+      const g = [must, ...chosen, ...wilds.slice(0, w)];
+      if (g.length >= 3 && g.length <= 4 && analyzeGroup(g, okey)?.kind === "set") out.push(g);
+    }
+  }
+  // Runs: every window of this colour that covers the tile, okeys filling gaps.
+  for (let start = Math.max(1, m.value - 12); start <= m.value; start++) {
+    for (let end = Math.max(m.value, start + 2); end <= 13; end++) {
+      const g: Tile[] = [];
+      let used = 0;
+      let fits = true;
+      for (let v = start; v <= end && fits; v++) {
+        if (v === m.value) {
+          g.push(must);
+          continue;
+        }
+        const t = others.find((x) => !isWild(x, okey) && !g.includes(x) && effective(x, okey).color === m.color && effective(x, okey).value === v);
+        if (t) g.push(t);
+        else if (used < wilds.length) g.push(wilds[used++]);
+        else fits = false;
+      }
+      if (fits && analyzeGroup(g, okey)) out.push(g);
+    }
+  }
+  return out;
+}
+
+/** The best runs and sets for the hand that include the tile `must`, or null when it fits nowhere. */
+function bestGroupsWith(hand: Tile[], okey: Okey, must: Tile): { groups: Tile[][]; points: number } | null {
+  let best: { groups: Tile[][]; points: number } | null = null;
+  for (const g of groupsWith(must, hand, okey)) {
+    const ids = new Set(g.map((t) => t.id));
+    const rest = bestGroups(
+      hand.filter((t) => !ids.has(t.id)),
+      okey,
+    );
+    const points = rest.points + (analyzeGroup(g, okey)?.points ?? 0);
+    if (!best || points > best.points) best = { groups: [g, ...rest.groups], points };
+  }
+  return best;
+}
+
+/**
+ * 101: the groups to open with (or lay down later) without picking tiles by
+ * hand. `mustUse` is a tile taken from the side, which has to be among them.
+ */
+export function autoLay(hand: Tile[], okey: Okey, opened: "series" | "pairs" | null, mustUse: number | null = null): AutoLay {
+  const must = mustUse === null ? undefined : hand.find((t) => t.id === mustUse);
+  const has = (gs: Tile[][]) => !must || gs.some((g) => g.includes(must));
+  let series = leaveOne(bestGroups(hand, okey).groups, hand.length, okey);
+  if (!has(series)) {
+    const withIt = bestGroupsWith(hand, okey, must!);
+    const kept = withIt && leaveOne(withIt.groups, hand.length, okey);
+    series = kept && has(kept) ? kept : [];
+  }
   const points = series.reduce((n, g) => n + (analyzeGroup(g, okey)?.points ?? 0), 0);
   const pairs = bestPairs(hand, okey);
-  const pairGroups = leaveOne(pairs, hand.length, okey);
+  let pairGroups = leaveOne(pairs, hand.length, okey);
+  if (!has(pairGroups)) pairGroups = [];
   const ids = (gs: Tile[][]) => gs.map((g) => g.map((t) => t.id));
   if (opened === "series") return series.length ? { groups: ids(series), how: "series", points } : { groups: null, points, pairs: pairs.length };
   if (opened === "pairs") return pairGroups.length ? { groups: ids(pairGroups), how: "pairs", points } : { groups: null, points, pairs: pairs.length };
   if (points >= 101) return { groups: ids(series), how: "series", points };
   if (pairGroups.length >= 5) return { groups: ids(pairGroups), how: "pairs", points };
   return { groups: null, points, pairs: pairs.length };
+}
+
+/** 101: a table group (not a pair) this tile could be added to, if any. */
+export function meldTakes(tile: Tile, table: { id: number; kind: GroupKind; tiles: Tile[] }[], okey: Okey): number | null {
+  for (const meld of table) {
+    if (meld.kind === "pair") continue;
+    const r = analyzeGroup([...meld.tiles, tile], okey);
+    if (r?.kind === meld.kind) return meld.id;
+  }
+  return null;
 }

@@ -43,7 +43,7 @@ const RULES: Record<GameId, Section[]> = {
       items: [
         "Seri ve perlerin toplamı en az 101 sayı ise elini açabilirsin. Ya da en az 5 çiftle çiftten açarsın.",
         "101'de 12-13-1 serisi geçmez.",
-        "Yandan aldığın taşı o el içinde kullanman gerekir; kullanmayacaksan geri koy.",
+        "Yandan aldığın taşı o el içinde kullanman gerekir: açmadıysan o taşla açarsın, açtıysan masaya koyar ya da işlersin. Kullanamayacaksan geri koy.",
       ],
     },
     {
@@ -55,6 +55,7 @@ const RULES: Record<GameId, Section[]> = {
       items: [
         "Bitiren -101 alır. Açmayan 202 ceza yer, açanlar elinde kalan taşların toplamını yazar.",
         "Çiftten ya da okeyle bitişte cezalar iki katına çıkar.",
+        "Ceza ayarı açıksa okeyi ya da masadaki bir gruba işlenebilecek taşı atan 101 ceza yazar.",
       ],
     },
   ],

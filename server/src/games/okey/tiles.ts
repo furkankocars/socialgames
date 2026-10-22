@@ -1,8 +1,8 @@
 import { TILE_COLORS, nextValue, type Tile, type TileColor } from "../../../../shared/games/okey.js";
 import { shuffle } from "../types.js";
-import { analyzeGroup, effective, isPair, isWild, split, type Okey } from "../../../../shared/games/okey-rules.js";
+import { analyzeGroup, effective, isPair, isWild, meldTakes, split, type Okey } from "../../../../shared/games/okey-rules.js";
 
-export { analyzeGroup, effective, isPair, isWild, type Okey };
+export { analyzeGroup, effective, isPair, isWild, meldTakes, type Okey };
 
 /** The 106-tile set: two of every color/value plus two false jokers. */
 export function createTiles(): Tile[] {

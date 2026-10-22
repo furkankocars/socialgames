@@ -1,5 +1,6 @@
 import type { OkeyAction, OkeyView, Tile } from "../../../../shared/games/okey.js";
-import { analyzeGroup, canFinishWithMelds, canFinishWithPairs, effective, isWild, type Okey } from "./tiles.js";
+import { autoLay } from "../../../../shared/games/okey-rules.js";
+import { analyzeGroup, canFinishWithMelds, canFinishWithPairs, effective, isWild, meldTakes, type Okey } from "./tiles.js";
 
 const OPEN_POINTS = 101;
 const OPEN_PAIRS = 5;
@@ -16,6 +17,7 @@ export function okeyBotAction(view: OkeyView): OkeyAction | null {
   if (view.phase === "draw") {
     const side = view.seats[(view.mySeat + 3) % 4].discards.at(-1);
     if (view.variant === "okey" && side && finishingTile([...hand, side], okey) !== null) return { type: "drawDiscard" };
+    if (view.variant === "okey101" && side && useForSide(view, side) !== null) return { type: "drawDiscard" };
     return { type: "drawCenter" };
   }
 
@@ -29,7 +31,10 @@ export function okeyBotAction(view: OkeyView): OkeyAction | null {
 
 function play101(view: OkeyView): OkeyAction {
   const { hand, okey } = view;
-  if (view.mustUseTileId !== null) return { type: "returnDiscard" };
+  if (view.mustUseTileId !== null) {
+    const side = hand.find((t) => t.id === view.mustUseTileId);
+    return (side && useForSide(view, side, hand)) ?? { type: "returnDiscard" };
+  }
   const opened = view.opened[view.mySeat];
 
   if (!opened) {
@@ -51,7 +56,21 @@ function play101(view: OkeyView): OkeyAction {
       }
     }
   }
-  return { type: "discard", tileId: worstTile(hand, okey).id };
+  // With penalties on, keep the tiles that would fit a group on the table.
+  const risky = (t: Tile) => view.penalties && meldTakes(t, view.table, okey) !== null;
+  return { type: "discard", tileId: worstTile(hand, okey, risky).id };
+}
+
+/** 101: the move that plays a tile taken from the side, or null when it can't be used. */
+function useForSide(view: OkeyView, side: Tile, hand = [...view.hand, side]): OkeyAction | null {
+  const opened = view.opened[view.mySeat];
+  if (opened === "series") {
+    const meldId = meldTakes(side, view.table, view.okey);
+    if (meldId !== null && hand.length > 1) return { type: "addToMeld", meldId, tileIds: [side.id] };
+  }
+  const auto = autoLay(hand, view.okey, opened, side.id);
+  if (!auto.groups) return null;
+  return { type: opened ? "layMelds" : "open", groups: auto.groups };
 }
 
 /** A tile whose discard leaves a finished hand, if there is one. */
@@ -68,9 +87,10 @@ function finishingTile(hand: Tile[], okey: Okey): number | null {
 }
 
 /** The tile with the fewest neighbours for runs, sets and pairs; never a wild unless nothing else is left. */
-export function worstTile(hand: Tile[], okey: Okey): Tile {
+export function worstTile(hand: Tile[], okey: Okey, avoid: (t: Tile) => boolean = () => false): Tile {
   const plain = hand.filter((t) => !isWild(t, okey));
-  const pool = plain.length ? plain : hand;
+  const safe = plain.filter((t) => !avoid(t));
+  const pool = safe.length ? safe : plain.length ? plain : hand;
   let worst = pool[0];
   let worstScore = Infinity;
   for (const tile of pool) {

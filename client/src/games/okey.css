@@ -63,10 +63,11 @@
   box-shadow: inset 0 3px 10px rgb(0 0 0 / 0.45);
   display: grid;
   grid-template-columns: 1fr 1.5fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   grid-template-areas:
     "c-tl top c-tr"
     "left center right"
+    "melds melds melds"
     "c-bl status c-br";
   gap: 8px;
   align-items: center;
@@ -355,15 +356,18 @@
   }
 }
 
-/* 101 melds on the table */
+/* 101 melds, laid out on the felt between the seats. */
 .okey-melds {
+  grid-area: melds;
+  justify-self: stretch;
+  align-self: stretch;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  background: #24573f;
-  box-shadow: inset 0 2px 8px rgb(0 0 0 / 0.4);
+  padding: 8px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.14);
 }
 .meld-list {
   display: flex;
@@ -377,6 +381,10 @@
   border: 0;
   border-radius: 6px;
   background: rgb(0 0 0 / 0.18);
+}
+.meld.drop-over {
+  background: rgb(240 199 94 / 0.35);
+  box-shadow: inset 0 0 0 2px #f0c75e;
 }
 .meld:hover:not(:disabled) {
   background: rgb(0 0 0 / 0.3);
@@ -765,4 +773,253 @@ button.wood:active:not(:disabled) {
 .seat-tag.partner {
   background: #f0c75e;
   color: var(--ink);
+}
+
+/* 101: the tile taken from the side, which has to be played this turn. */
+.tile.must {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 2.5px #e0573a,
+    0 3px 0 #cdbf9f,
+    0 4px 5px rgb(0 0 0 / 0.35);
+}
+.tile.must.selected {
+  box-shadow:
+    inset 0 1px 0 #fff,
+    0 0 0 2.5px #f0c75e,
+    0 0 0 5px #e0573a,
+    0 10px 12px rgb(0 0 0 / 0.4);
+}
+
+.full-toggle {
+  white-space: nowrap;
+}
+
+/*
+ * A phone turned sideways: the whole table fits on one screen like the app
+ * tables. Felt on top with the melds between the seats, the ıstaka under it,
+ * and a narrow column on the right for the okey, the counter and the buttons.
+ * The tabs (scores, chat, rules) stay below, a scroll away.
+ */
+@media (orientation: landscape) and (max-height: 520px) {
+  .play.okey-play {
+    display: block;
+  }
+  .play.okey-play .play-side {
+    margin-top: 1rem;
+    position: static;
+    height: auto;
+    border: 0;
+    padding: 0;
+  }
+  .content.wide:has(.okey-play) {
+    padding: 6px max(8px, env(safe-area-inset-right)) 1rem max(8px, env(safe-area-inset-left));
+  }
+  .okey {
+    --tile-w: 22px;
+    --tile-h: 30px;
+    --slot-h: 11.5dvh;
+    height: calc(100dvh - var(--bar-h) - 12px);
+    min-height: 260px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 9.75rem;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "table hud"
+      "table summary"
+      "table actions"
+      "rack actions";
+    gap: 6px 8px;
+  }
+  .okey-hud {
+    grid-area: hud;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 4px 8px;
+  }
+  .okey-hud .hud-label {
+    display: none;
+  }
+  .okey-hud .hud-okey {
+    order: -1;
+  }
+  .okey-hud .treat-tray {
+    gap: 2px;
+  }
+  /* Out of the way at the top of the button column. */
+  .okey-actions .full-toggle {
+    order: -1;
+    margin-bottom: auto;
+    font-size: 0.72rem;
+    padding: 0.2rem 0.4rem;
+  }
+  .okey-table {
+    grid-area: table;
+    min-height: 0;
+    padding: 6px;
+    border-radius: 14px;
+    display: flex;
+  }
+  .felt {
+    flex: 1;
+    min-height: 0;
+    padding: 6px 8px;
+    gap: 4px 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "c-tl top top c-tr"
+      "left melds melds right"
+      "c-bl status center c-br";
+  }
+  .felt .tile.small {
+    font-size: 0.85rem;
+  }
+  /* Seats get small; the one across sits beside its avatar to save height. */
+  .seat.top {
+    display: grid;
+    grid-template-columns: auto auto;
+    column-gap: 6px;
+    justify-items: start;
+    align-items: center;
+    text-align: left;
+  }
+  .seat.top .seat-avatar {
+    grid-row: 1 / span 3;
+  }
+  .seat.left,
+  .seat.right {
+    max-width: 6.5rem;
+  }
+  .seat.left .seat-meta,
+  .seat.right .seat-meta {
+    white-space: normal;
+  }
+  .seat-avatar {
+    margin: 0;
+    padding: 2px;
+  }
+  /* The avatar sizes itself inline; on a sideways phone it has to shrink. */
+  .seat-avatar .avatar {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 0.72rem !important;
+  }
+  .seat-name {
+    font-size: 0.78rem;
+  }
+  .seat-meta {
+    font-size: 0.66rem;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+  .spot-label {
+    font-size: 0.56rem;
+  }
+  .felt-center {
+    gap: 8px;
+  }
+  .stack-count {
+    font-size: 0.8rem;
+    top: calc(var(--tile-h) / 2 - 9px);
+  }
+  .felt-status {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.5rem;
+    align-self: center;
+  }
+  .okey-melds {
+    overflow-y: auto;
+    padding: 4px 6px;
+    gap: 3px;
+  }
+  .meld-list {
+    gap: 4px;
+  }
+  .meld {
+    padding: 2px;
+  }
+  .okey-melds .tile.small {
+    --tile-w: 18px;
+    --tile-h: 25px;
+    font-size: 0.72rem;
+    border-radius: 3px;
+  }
+  .okey-melds .tile-pip {
+    display: none;
+  }
+
+  /* The ıstaka keeps its tiles about a ninth of the screen tall. */
+  .istaka {
+    grid-area: rack;
+    justify-self: center;
+    width: min(100%, calc(15 * (var(--slot-h) * 0.72 + 2px) + 16px));
+    padding: 4px 6px 2px;
+    gap: 2px;
+  }
+  .istaka-row {
+    gap: 2px;
+    padding: 0 2px 6px;
+  }
+  .istaka-row::after {
+    height: 6px;
+  }
+  .slot {
+    aspect-ratio: 0.72;
+  }
+  .tile {
+    font-size: clamp(0.8rem, 5.2dvh, 1.25rem);
+    border-radius: 4px;
+  }
+  .tile.selected {
+    translate: 0 -5px;
+  }
+  .tile-okey {
+    display: none;
+  }
+
+  .rack-summary {
+    grid-area: summary;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 2px;
+    margin: 0;
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+  .rack-summary strong {
+    font-size: 0.85rem;
+  }
+  .rack-summary .small {
+    display: none;
+  }
+  .okey-actions {
+    grid-area: actions;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    justify-content: flex-end;
+    gap: 5px;
+    min-height: 0;
+  }
+  .okey-actions .spacer {
+    display: none;
+  }
+  .okey-actions button {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.8rem;
+    min-height: 0;
+  }
+  .okey-actions button.chunky {
+    padding: 0.45rem 0.5rem;
+    font-size: 0.88rem;
+  }
+  .okey .hint {
+    display: none;
+  }
+  .round-sheet {
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 0.6rem 0.8rem;
+  }
 }

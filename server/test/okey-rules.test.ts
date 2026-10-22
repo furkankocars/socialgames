@@ -81,6 +81,28 @@ describe("auto open (101)", () => {
   });
 });
 
+describe("autoLay with a tile taken from the side", () => {
+  it("builds the groups around that tile, or gives up when it fits nowhere", () => {
+    const hand = [
+      t("red", 10), t("red", 11), t("red", 12), t("red", 13),
+      t("blue", 10), t("yellow", 10), t("black", 10),
+      t("blue", 11), t("yellow", 11), t("black", 11),
+      t("yellow", 12), t("blue", 2), t("red", 4), t("blue", 12), t("black", 12),
+    ];
+    const side = hand[10];
+    const result = autoLay(hand, okey, null, side.id);
+    expect(result.groups).not.toBeNull();
+    expect(result.groups!.some((g) => g.includes(side.id))).toBe(true);
+    const byId = new Map(hand.map((x) => [x.id, x]));
+    const groups = result.groups!.map((g) => g.map((id) => byId.get(id)!));
+    expect(groups.reduce((n, g) => n + analyzeGroup(g, okey)!.points, 0)).toBeGreaterThanOrEqual(101);
+
+    const loose = hand[12];
+    expect(autoLay(hand, okey, null, loose.id).groups).toBeNull();
+    expect(autoLay(hand, okey, null).groups).not.toBeNull();
+  });
+});
+
 describe("12-13-1", () => {
   it("is a run in normal okey but not in 101", () => {
     const run = [t("red", 12), t("red", 13), t("red", 1)];
