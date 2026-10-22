@@ -86,3 +86,7 @@ Kendi kopyanı yayına almak için:
 3. Kurulum bitince verilen `https://<isim>.onrender.com` adresini arkadaşlarınla paylaş.
 
 Ücretsiz planda sunucu 15 dakika boş kalınca uyur, ilk giriş yaklaşık bir dakika sürebilir. Odalar bellekte tutulur, sunucu yeniden başlarsa açık odalar kapanır. GitHub Pages ya da Netlify gibi statik barındırma yetmez, çünkü oyunlar gerçek zamanlı bir sunucuya ihtiyaç duyar.
+
+## Yapan
+
+Sosyal Oyunlar, Furkan Koçar tarafından yapıldı.

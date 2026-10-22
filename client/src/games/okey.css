@@ -1023,3 +1023,18 @@ button.wood:active:not(:disabled) {
     padding: 0.6rem 0.8rem;
   }
 }
+
+/* Each seat's points for the hand just played, on the round sheet. */
+.round-scores {
+  font-size: 0.88rem;
+}
+.round-scores thead td {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+.round-scores td {
+  padding: 0.3rem 0.25rem;
+}

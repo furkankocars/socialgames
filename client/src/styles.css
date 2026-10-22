@@ -568,6 +568,32 @@ label.row select {
   padding-top: 0.75rem;
 }
 
+/* The maker's signature at the foot of the home page and the guide. */
+.credit {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.6rem;
+  width: calc(100% - 2.5rem);
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.1rem 0 max(1.4rem, env(safe-area-inset-bottom));
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+}
+.credit-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.credit-name {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+
 /* Shell */
 .app {
   min-height: 100dvh;
@@ -648,9 +674,20 @@ button.bar-btn:hover:not(:disabled) {
 .bar-icon path:first-child {
   fill: currentColor;
 }
+.bar-short {
+  display: none;
+}
 @media (max-width: 560px) {
   .bar-text,
-  .room-code-label {
+  .room-code-label,
+  .bar-long {
+    display: none;
+  }
+  .bar-short {
+    display: inline;
+  }
+  /* Nobody new can sit down mid-game, so the game's name gets the room. */
+  .is-playing .room-code {
     display: none;
   }
   button.bar-btn {

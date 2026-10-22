@@ -126,7 +126,7 @@ export function VampirScreen({ room }: { room: RoomView }) {
               {name}
               {p.id === room.you && " (sen)"}
             </span>
-            {p.role && p.id !== room.you && <span className={`villager-role r-${p.role}`}>{VAMPIR_ROLE_NAMES[p.role]}</span>}
+            {p.role && (p.id !== room.you || g.phase === "finished") && <span className={`villager-role r-${p.role}`}>{VAMPIR_ROLE_NAMES[p.role]}</span>}
             {!p.alive && <span className="villager-role">öldü</span>}
             {voteCount > 0 && (
               <span className="votes" aria-label={`${voteCount} oy`}>

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { GAMES, type GameId } from "../../shared/protocol";
+import { Credit } from "./Credit";
 import { BrandMark } from "./BrandMark";
 import { GameEmblem } from "./GameEmblem";
 
@@ -465,6 +466,7 @@ export function Guide({ game }: { game: GameId | "" }) {
           )}
         </article>
       </div>
+      <Credit />
     </div>
   );
 }

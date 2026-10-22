@@ -482,6 +482,26 @@ export function OkeyScreen({ room }: { room: RoomView }) {
                     ))}
                   </div>
                 )}
+                <table className="scores round-scores">
+                  <thead>
+                    <tr>
+                      <td />
+                      <td>Bu el</td>
+                      <td>Toplam</td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.seats.map((s, i) => (
+                      <tr key={s.id} className={i === mySeat ? "me" : ""}>
+                        <td>{nameOf(room, s.id)}</td>
+                        <td>{g.lastRound!.deltas[i] > 0 ? `+${g.lastRound!.deltas[i]}` : g.lastRound!.deltas[i]}</td>
+                        <td>
+                          <strong>{s.score}</strong>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                 {g.gameOver ? (
                   <p className="muted small">Oda sahibi lobiye dönüp yeni oyun açabilir.</p>
                 ) : room.hostId === room.you ? (

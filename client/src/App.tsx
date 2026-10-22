@@ -69,8 +69,9 @@ function Main() {
             </button>
           )}
           {playing && isHost && (
-            <button className="bar-btn" onClick={() => confirm("Oyunu bitirip lobiye dönülsün mü?") && act(request("room:backToLobby"))}>
-              Lobiye dön
+            <button className="bar-btn" title="Lobiye dön" onClick={() => confirm("Oyunu bitirip lobiye dönülsün mü?") && act(request("room:backToLobby"))}>
+              <span className="bar-long">Lobiye dön</span>
+              <span className="bar-short">Lobi</span>
             </button>
           )}
           <button
