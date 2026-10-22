@@ -5,6 +5,7 @@ import { useAct, useToast } from "./toast";
 import { GameEmblem } from "./GameEmblem";
 import { BrandMark } from "./BrandMark";
 import { guideHref } from "./Guide";
+import { Credit } from "./Credit";
 
 export function Home() {
   const initialCode = new URLSearchParams(location.search).get("oda")?.toUpperCase() ?? "";
@@ -107,6 +108,7 @@ export function Home() {
           </p>
         </section>
       </div>
+      <Credit />
     </div>
   );
 }
