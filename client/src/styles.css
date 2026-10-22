@@ -533,9 +533,22 @@ label.row select {
   flex-direction: column;
   gap: 0.1rem;
 }
-.menu-text strong {
+.menu-text strong,
+.menu-name {
   font-family: var(--display);
   font-size: 1.15rem;
+  font-weight: 700;
+}
+.menu-name {
+  color: inherit;
+  align-self: start;
+  text-decoration: underline dotted var(--ink-soft);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 4px;
+}
+.menu-name:hover {
+  color: var(--accent-dark);
+  text-decoration: underline solid var(--accent);
 }
 .menu .desc {
   color: var(--ink-soft);
@@ -1176,4 +1189,230 @@ table.scores td.muted {
   width: auto;
   white-space: nowrap;
   font-size: 0.85rem;
+}
+
+/* Links that read as part of the text, used for the guide links. */
+a.text-link {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+a.text-link:hover {
+  color: var(--accent-dark);
+}
+a:focus-visible {
+  outline: 3px solid var(--brass);
+  outline-offset: 2px;
+}
+
+/* Guide (Guide.tsx): an index of games on the left, the open game's steps on the right. */
+.guide {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.guide-bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding-right: 0.75rem;
+}
+.guide-bar .spacer {
+  flex: 1;
+}
+.guide-wrap {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 4rem;
+  display: grid;
+  gap: 1.5rem;
+}
+.guide-index {
+  display: flex;
+  gap: 0.25rem 1.1rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--rule);
+  margin-inline: -1.25rem;
+  padding-inline: 1.25rem;
+}
+.guide-index a {
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 0.6rem 0 0.5rem;
+  border-bottom: 2px solid transparent;
+}
+.guide-index a:hover {
+  color: var(--ink);
+}
+.guide-index a[aria-current="page"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+@media (min-width: 900px) {
+  .guide-wrap {
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 3.5rem;
+    padding-top: 3rem;
+  }
+  .guide-index {
+    flex-direction: column;
+    align-self: start;
+    position: sticky;
+    top: calc(var(--bar-h) + 2rem);
+    border-bottom: 0;
+    border-right: 1px solid var(--rule);
+    margin: 0;
+    padding: 0;
+    gap: 0;
+  }
+  .guide-index a {
+    padding: 0.45rem 0;
+    border-bottom: 0;
+    border-right: 2px solid transparent;
+    margin-right: -1px;
+  }
+  .guide-index a[aria-current="page"] {
+    border-right-color: var(--accent);
+  }
+}
+.guide-body {
+  min-width: 0;
+  max-width: 860px;
+}
+.guide-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--ink);
+}
+.guide-head h1 {
+  font-size: clamp(2.1rem, 5vw, 3.1rem);
+  margin-bottom: 0.2rem;
+}
+.guide-meta {
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+.guide-lead {
+  font-size: 1.12rem;
+  max-width: 58ch;
+  margin: 1.2rem 0 0.5rem;
+}
+.guide-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.guide-steps li {
+  display: grid;
+  grid-template-columns: 1.6rem minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  padding: 1.6rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.guide-num {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.3rem;
+  line-height: 1.1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.guide-text h2 {
+  font-size: 1.3rem;
+  margin-bottom: 0.4rem;
+}
+.guide-text p {
+  max-width: 60ch;
+}
+.guide-shot {
+  grid-column: 2;
+  margin: 0.9rem 0 0;
+  max-width: 320px;
+}
+.guide-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px;
+  background: var(--paper-2);
+}
+.guide-shot figcaption {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  margin-top: 0.45rem;
+}
+@media (max-width: 480px) {
+  .guide-shot {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+}
+@media (min-width: 760px) {
+  .guide-steps li.has-shot {
+    grid-template-columns: 1.6rem minmax(0, 1fr) 280px;
+    gap: 0.25rem 0.75rem;
+  }
+  .guide-steps li.has-shot .guide-shot {
+    grid-column: 3;
+    margin-left: 1rem;
+    grid-row: 1 / span 2;
+    margin-top: 0.2rem;
+  }
+}
+.guide-notes {
+  padding-top: 1.8rem;
+}
+.guide-notes h2 {
+  font-size: 1.3rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1.5px solid var(--ink);
+  margin-bottom: 0.6rem;
+}
+.guide-notes ul {
+  margin: 0.4rem 0 0;
+  padding-left: 1.2rem;
+  max-width: 64ch;
+}
+.guide-notes li {
+  margin: 0.4rem 0;
+}
+.guide-notes li::marker {
+  color: var(--accent);
+}
+.guide-next {
+  display: inline-flex;
+  flex-direction: column;
+  margin-top: 2.5rem;
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 0.2rem;
+}
+.guide-next strong {
+  font-family: var(--display);
+  font-size: 1.4rem;
+}
+.guide-next:hover strong {
+  color: var(--accent-dark);
+}
+
+.lobby-guide {
+  margin-left: auto;
+  font-family: var(--body);
+  font-size: 0.9rem;
+  letter-spacing: 0;
+}
+.rules-guide {
+  margin-top: 1.1rem;
+  font-size: 0.95rem;
 }

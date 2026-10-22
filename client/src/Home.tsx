@@ -4,6 +4,7 @@ import { request, saveName, savedName } from "./socket";
 import { useAct, useToast } from "./toast";
 import { GameEmblem } from "./GameEmblem";
 import { BrandMark } from "./BrandMark";
+import { guideHref } from "./Guide";
 
 export function Home() {
   const initialCode = new URLSearchParams(location.search).get("oda")?.toUpperCase() ?? "";
@@ -87,7 +88,9 @@ export function Home() {
               <li key={g.id}>
                 <GameEmblem game={g.id} size={52} />
                 <span className="menu-text">
-                  <strong>{g.name}</strong>
+                  <a className="menu-name" href={guideHref(g.id)}>
+                    {g.name}
+                  </a>
                   <span className="desc">{g.description}</span>
                 </span>
                 <span className="count">
@@ -96,7 +99,12 @@ export function Home() {
               </li>
             ))}
           </ul>
-          <p className="menu-foot">Eksik kalan koltuğa bot oturtulabilir; Tabu hariç.</p>
+          <p className="menu-foot">
+            Oyunun adına dokunursan nasıl oynandığı ekran görüntüleriyle anlatılır. Eksik koltuğa bot oturtulabilir; Tabu ve Casus hariç.{" "}
+            <a className="text-link" href={guideHref()}>
+              Masaya nasıl oturulur
+            </a>
+          </p>
         </section>
       </div>
     </div>
