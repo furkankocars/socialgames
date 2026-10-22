@@ -9,6 +9,7 @@ import {
   dealSetup,
   isPair,
   isWild,
+  meldTakes,
   tilePoints,
   type Okey,
 } from "./tiles.js";
@@ -18,6 +19,8 @@ type Variant = OkeyView["variant"];
 const OPEN_POINTS = 101;
 const OPEN_PAIRS = 5;
 const UNOPENED_PENALTY = 202;
+/** 101 with penalties: throwing the okey, or a tile that fits a group on the table. */
+const THROW_PENALTY = 101;
 /** A turn that runs out is played by the bot; this many moves at most. */
 const MAX_TIMEOUT_MOVES = 4;
 
@@ -44,6 +47,8 @@ export class OkeyGame implements GameInstance {
   private indicatorBonus: boolean;
   /** Eşli: players opposite each other (seats 0+2, 1+3) score as a team. */
   private esli: boolean;
+  /** 101: throwing the okey or a tile that could be added to the table costs 101. */
+  private penalties: boolean;
   private shownIndicator = [false, false, false, false];
   private turnMs: number;
   private turnEndsAt: number | null = null;
@@ -60,6 +65,7 @@ export class OkeyGame implements GameInstance {
     this.katlamali = variant === "okey" && options.katlamali === 1;
     this.indicatorBonus = variant === "okey" && options.gosterge !== 0;
     this.esli = options.esli === 1;
+    this.penalties = variant === "okey101" && options.cezalar !== 0;
     const seconds = clampInt(options.turnSeconds, 0, 120, 0);
     this.turnMs = seconds === 0 ? 0 : Math.max(10, seconds) * 1000;
     if (this.katlamali) this.scores.fill(clampInt(options.startPoints, 4, 50, 20));
@@ -101,6 +107,7 @@ export class OkeyGame implements GameInstance {
       totalRounds: this.katlamali ? 0 : this.totalRounds,
       katlamali: this.katlamali,
       esli: this.esli,
+      penalties: this.penalties,
       teamScores: this.esli ? [this.teamScore(0), this.teamScore(1)] : null,
       turnMsLeft: this.turnEndsAt === null ? null : Math.max(0, this.turnEndsAt - Date.now()),
       turnSeconds: this.turnMs / 1000,
@@ -202,6 +209,13 @@ export class OkeyGame implements GameInstance {
           this.finish101(seat, tile);
           return;
         }
+        if (this.penalties) {
+          const why = isWild(tile, this.okey) ? "okeyi attı" : meldTakes(tile, this.table, this.okey) !== null ? "işlek taş attı" : null;
+          if (why) {
+            this.scores[seat] += THROW_PENALTY;
+            this.notice = `${this.name(seat)} ${why}, ${THROW_PENALTY} ceza yazıldı.`;
+          }
+        }
         this.advanceTurn();
         return;
       }
@@ -238,6 +252,9 @@ export class OkeyGame implements GameInstance {
         this.requirePhase("discard");
         if (this.opened[seat]) throw new GameError("Zaten açtın.");
         const groups = this.readGroups(seat, action.groups);
+        if (this.mustUseTileId !== null && !groups.some((g) => g.some((t) => t.id === this.mustUseTileId))) {
+          throw new GameError("Yandan aldığın taşla açmalısın; açamıyorsan geri koy.");
+        }
         if (groups.every((g) => g.length === 2)) {
           if (groups.length < OPEN_PAIRS) throw new GameError(`Çiftten açmak için en az ${OPEN_PAIRS} çift gerekli.`);
           if (!groups.every((g) => isPair(g, this.okey))) throw new GameError("Çiftlerden biri geçersiz.");

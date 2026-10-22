@@ -108,11 +108,11 @@ const GUIDES: Record<GameId, GameGuide> = {
       },
       {
         title: "Yandan almak",
-        text: "Solundakinin attığı taşı alırsan o taşı aynı el içinde masaya koymalısın. Kullanamayacaksan Aldığımı geri koy'a bas.",
+        text: "Solundakinin attığı taşı alırsan o taşı aynı el içinde kullanmalısın: henüz açmadıysan o taşla açarsın, açtıysan masaya koyar ya da bir gruba işlersin. Elimi aç ve Yere koy düğmeleri yandan aldığın taşı dizilişe kendileri katar. Kullanamayacaksan Aldığımı geri koy'a bas.",
       },
       {
         title: "İşlemek ve bitirmek",
-        text: "Açtıktan sonra masadaki herhangi bir seri ya da perin ucuna taş ekleyebilirsin; çiftlere taş işlenmez. Elinde son taş kalınca onu atarak bitirirsin.",
+        text: "Açtıktan sonra masadaki herhangi bir seri ya da perin ucuna taş ekleyebilirsin; taşı seçip gruba dokun ya da taşı gruba sürükle. Çiftlere taş işlenmez. Elinde son taş kalınca onu atarak bitirirsin.",
       },
     ],
     scoring: [
@@ -123,7 +123,7 @@ const GUIDES: Record<GameId, GameGuide> = {
     ],
     house: [
       "101'de 12-13-1 serisi geçmez; 1 sadece serinin başında durur.",
-      "Bazı masalarda okeyi ya da masaya işlenebilecek bir taşı atana 101 ceza yazılır. Bu masada böyle bir ceza yok.",
+      "Okeyi ya da masaya işlenebilecek bir taşı atana 101 ceza yazılır. Oda sahibi bu cezayı lobide kapatabilir; açıkken böyle bir taşı atmaya kalkınca masa seni bir kez uyarır.",
       "Desteden taş biterse el kimse bitirmeden kapanır ve herkes elinde kalan cezayı yazar.",
     ],
     tips: [

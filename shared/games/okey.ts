@@ -29,6 +29,8 @@ export interface OkeyView {
   /** Partners sit opposite: seats 0+2 are team 0, seats 1+3 team 1. */
   esli: boolean;
   teamScores: [number, number] | null;
+  /** 101: throwing the okey or a tile that fits a group on the table costs 101. */
+  penalties: boolean;
   /** Time left in the current turn when this view was sent; null when turns are untimed. */
   turnMsLeft: number | null;
   turnSeconds: number;
