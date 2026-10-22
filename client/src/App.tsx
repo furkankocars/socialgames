@@ -9,6 +9,7 @@ import { OkeyScreen } from "./games/OkeyScreen";
 import { ChessScreen } from "./games/ChessScreen";
 import { PistiScreen } from "./games/PistiScreen";
 import { CasusScreen } from "./games/CasusScreen";
+import { BatakScreen } from "./games/BatakScreen";
 import { setSound, useSoundEnabled } from "./sound";
 import { BrandMark } from "./BrandMark";
 import { Guide, useGuideRoute } from "./Guide";
@@ -85,6 +86,7 @@ function Main() {
             {(room.selectedGame === "okey" || room.selectedGame === "okey101") && <OkeyScreen room={room} />}
             {room.selectedGame === "chess" && <ChessScreen room={room} />}
             {room.selectedGame === "pisti" && <PistiScreen room={room} />}
+            {room.selectedGame === "batak" && <BatakScreen room={room} />}
             {room.selectedGame === "casus" && <CasusScreen room={room} />}
           </>
         )}

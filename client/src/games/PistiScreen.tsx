@@ -39,17 +39,18 @@ export function SuitMark({ suit, className = "" }: { suit: Suit; className?: str
   );
 }
 
-export function PlayingCard({ card, size = "md", selected, fresh, style, onClick, onPointerDown }: {
+export function PlayingCard({ card, size = "md", selected, fresh, className, style, onClick, onPointerDown }: {
   card: Card;
   size?: "sm" | "md" | "lg";
   selected?: boolean;
   fresh?: boolean;
+  className?: string;
   style?: CSSProperties;
   onClick?: () => void;
   onPointerDown?: (e: ReactPointerEvent<HTMLElement>) => void;
 }) {
   const label = rankLabel(card.rank);
-  const cls = ["pcard", size, RED.includes(card.suit) ? "red" : "black", card.rank > 10 && "face", selected && "selected", onClick && "clickable", fresh && "fresh"];
+  const cls = ["pcard", size, RED.includes(card.suit) ? "red" : "black", card.rank > 10 && "face", selected && "selected", onClick && "clickable", fresh && "fresh", className];
   return (
     <div
       className={cls.filter(Boolean).join(" ")}
