@@ -6,6 +6,7 @@ import { Toggle } from "./Toggle";
 import { setColorblind, useColorblind } from "./prefs";
 import { Avatar } from "./Avatar";
 import { GameEmblem } from "./GameEmblem";
+import { CASUS_CATEGORIES } from "../../shared/games/casus";
 
 type Values = Record<string, number>;
 
@@ -139,6 +140,33 @@ const OPTIONS: Record<GameId, Option[]> = {
       hint: "Pişti 10, vale pişti 20, kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1 sayı.",
     },
     TURN_TIME,
+  ],
+  casus: [
+    {
+      key: "category",
+      label: "Kategori",
+      choices: CASUS_CATEGORIES.map((label, value) => ({ value, label })),
+      initial: 0,
+      hint: (v) => (v.category ? "Kelimeler sadece bu kategoriden gelir; kategori casusa da söylenir." : "Her tur kelime rastgele bir kategoriden gelir."),
+    },
+    {
+      key: "spies",
+      label: "Casus sayısı",
+      choices: nums([1, 2, 3]),
+      initial: 1,
+      hint: "Casuslar birbirini bilmez. Casuslar hep azınlıkta kalır: 2 casus için en az 5, 3 casus için en az 7 kişi gerekir.",
+    },
+    {
+      key: "talkMinutes",
+      label: "Soru süresi",
+      choices: [{ value: 0, label: "Süresiz" }, ...nums([3, 5, 8], " dk")],
+      initial: 5,
+      hint: (v) =>
+        v.talkMinutes
+          ? "Süre bitince oylama başlar. Masanın yarısından fazlası isterse daha erken de geçilir."
+          : "Masanın yarısından fazlası isteyince oylamaya geçilir.",
+    },
+    { key: "rounds", label: "Tur sayısı", choices: nums([1, 3, 5, 7]), initial: 3 },
   ],
 };
 

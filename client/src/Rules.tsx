@@ -140,6 +140,34 @@ const RULES: Record<GameId, Section[]> = {
       items: ["Kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1 sayı.", "4 kişide eşli oynanırsa karşılıklı oturanların puanı birlikte sayılır."],
     },
   ],
+  casus: [
+    {
+      title: "Kartlar",
+      items: [
+        "Her turda herkese aynı gizli kelime gelir, casusa gelmez. Casus sadece casus olduğunu öğrenir.",
+        "Kategori seçildiyse kelime o kategoriden gelir. Birden çok casus varsa birbirlerini bilmezler.",
+      ],
+    },
+    {
+      title: "Sorular",
+      items: [
+        "İlk soruyu ekranda yazan kişi sorar, istediği birine. Cevap veren, sıradaki soruyu sorar.",
+        "Sorular ve cevaplar kelimeyi bilen birinin anlayacağı kadar açık, casusun çözemeyeceği kadar kapalı olmalı.",
+        "Casus istediği an kelimeyi listeden tahmin edebilir: bilirse kazanır, yanılırsa masa kazanır.",
+      ],
+    },
+    {
+      title: "Oylama",
+      items: [
+        "Süre bitince ya da masanın yarısından fazlası isteyince oylama başlar. Herkes şüphelendiği kişiye gizlice oy verir.",
+        "En çok oyu alan suçlanır, eşitlikte kimse suçlanmaz. Suçlanan casussa son bir şansla kelimeyi tahmin eder.",
+      ],
+    },
+    {
+      title: "Puan",
+      items: ["Masa kazanırsa casus olmayan herkes 1 puan alır. Casus sıyrılırsa 2, kelimeyi bilirse 3 puan alır."],
+    },
+  ],
 };
 
 export function Rules({ game }: { game: GameId }) {
