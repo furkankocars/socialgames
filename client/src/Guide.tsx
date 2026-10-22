@@ -47,7 +47,7 @@ const BASICS: Step[] = [
   },
   {
     title: "Eksik koltuğa bot oturt",
-    text: "Okey, 101, Pişti, Satranç ve Vampir Köylü'de boş koltuğa bot oturtulabilir. Tabu ve Casus konuşarak oynandığı için botla oynanmaz.",
+    text: "Okey, 101, Pişti, Batak, Satranç ve Vampir Köylü'de boş koltuğa bot oturtulabilir. Tabu ve Casus konuşarak oynandığı için botla oynanmaz.",
   },
   {
     title: "Oyun sırasında",
@@ -279,6 +279,45 @@ const GUIDES: Record<GameId, GameGuide> = {
       "Hangi kartların çıktığını aklında tut. Bir sayının dört kartından üçü çıktıysa sonuncusunu atmak güvenlidir, onunla kimse pişti yapamaz.",
       "Valeyi yerde çok kart birikince kullan; tek karta vale atmak boşa gider.",
       "Yerde tek kart bırakmaktan kaçın, rakibe pişti fırsatı verir.",
+    ],
+  },
+  batak: {
+    lead: "Dört kişiyle 52 kartlık desteyle oynanır. Herkese 13 kart gelir; amaç söylediğin kadar eli toplamak. İhaleli ya da koz maça, tekli ya da eşli oynanabilir.",
+    steps: [
+      {
+        title: "İhale",
+        text: "İhalelide dağıtanın solundan başlayarak herkes elini inceleyip kaç el alabileceğini söyler. Her söylenen bir öncekinden büyük olmalı; tekli en az 4, eşli en az 7. Pas geçen o elde ihaleye dönemez. Herkes pas derse ihale en az sayıyla dağıtana kalır.",
+        shot: shot("batak-ihale", "Batak ihalesi: sıradaki oyuncunun önünde ihale sayıları ve Pas düğmesi", 844, 390),
+      },
+      {
+        title: "Koz",
+        text: "İhaleyi alan kozu seçer ve ilk kartı o atar. Koz maçada ihale yoktur: koz hep maçadır, herkes sırayla kaç el alacağını söyler.",
+      },
+      {
+        title: "Kart at",
+        text: "Atabileceğin kartlar parlak, atamayacakların koyu görünür. Kartı ortaya sürükle ya da iki kez dokun. Yerdeki renge uymak, geçebiliyorsan yükseltmek zorunlu. O renk yoksa koz atmalısın. Koz biri koz atana kadar ilk kart olarak açılamaz.",
+        shot: shot("batak-masa", "Batak masası telefon yatayken: ortada atılan kartlar, altta yelpaze gibi açılmış el", 844, 390),
+      },
+      {
+        title: "El sonu",
+        text: "13 el bitince herkesin aldığı eller sayılır, ihale ya da söz tuttu mu bakılır. Puanlar sekmesinde her elin puanı ve toplam görünür.",
+      },
+    ],
+    scoring: [
+      "İhaleli: ihaleyi çıkaran aldığı el kadar yazar, batan ihalesi kadar eksi yazar. Diğerleri aldıkları el kadar yazar.",
+      "Koz maça: sözünü tutan aldığı el kadar, tutamayan sözü kadar eksi yazar.",
+      "Eşli oyunda eşlerin elleri ve sözleri toplanır.",
+      "Seçilen el sayısı (5, 10, 15 ya da 20) bitince en çok puanı olan kazanır.",
+    ],
+    house: [
+      "Yükseltme zorunlu: yerdeki kartı geçebiliyorsan küçük atamazsın. Bazı masalarda bu serbesttir.",
+      "Elinde yerdeki renk yoksa koz atmak zorunlu; geçemesen bile koz atarsın.",
+      "Bazı masalarda hiç el alamayan oyuncu da batmış sayılır; bu masada sadece ihaleyi ya da sözünü tutamayan batar.",
+    ],
+    tips: [
+      "İhaleyi elindeki asları, papazlı asları ve uzun koz rengini sayarak ver; her as genelde bir el, dördüncü kozdan sonrası da birer el demektir.",
+      "Kısa bir rengin varsa o rengi bitirip kozla kesebilirsin.",
+      "Hangi büyük kartların çıktığını aklında tut; elindeki kart o rengin en büyüğü kaldıysa onunla başla.",
     ],
   },
   casus: {

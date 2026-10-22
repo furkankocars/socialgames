@@ -142,6 +142,44 @@ const RULES: Record<GameId, Section[]> = {
       items: ["Kartların çoğu 3, karo 10 3, sinek 2 2, her as ve vale 1 sayı.", "4 kişide eşli oynanırsa karşılıklı oturanların puanı birlikte sayılır."],
     },
   ],
+  batak: [
+    {
+      title: "Dağıtım",
+      items: [
+        "Dört kişiye 13'er kart dağıtılır. As en büyük, 2 en küçük karttır.",
+        "Tekli ya da eşli oynanır; eşlide karşılıklı oturanların aldığı eller birlikte sayılır.",
+      ],
+    },
+    {
+      title: "İhaleli",
+      items: [
+        "Dağıtanın solundan başlayarak herkes kaç el alacağını söyleyerek ihaleyi yükseltir ya da pas geçer. Pas geçen o elde bir daha ihale veremez.",
+        "En az ihale tekli 4, eşli 7. Herkes pas geçerse ihale en az sayıyla dağıtana kalır.",
+        "İhaleyi alan kozu seçer ve ilk kartı o atar.",
+      ],
+    },
+    {
+      title: "Koz maça",
+      items: ["Koz hep maçadır, ihale yoktur. Herkes sırayla kaç el alacağını söyler (en az 1), ilk kartı dağıtanın solundaki atar."],
+    },
+    {
+      title: "Kart atma",
+      items: [
+        "Yerdeki renge uymak zorundasın; yerdekini geçebiliyorsan yükseltmek de zorunlu.",
+        "O renk elinde yoksa koz atmalısın; yerde koz varsa geçebiliyorsan geçmelisin. Kozun da yoksa istediğini atarsın.",
+        "Koz, biri koz atana kadar ilk kart olarak açılamaz (elinde sadece koz kalmadıysa).",
+        "Eli en büyük koz, koz yoksa yerdeki rengin en büyüğü alır. Eli alan sonraki eli başlatır.",
+      ],
+    },
+    {
+      title: "Puan",
+      items: [
+        "İhaleli: ihaleyi çıkaran aldığı el kadar yazar, çıkaramayan (batan) ihalesi kadar eksi yazar. Diğerleri aldıkları el kadar yazar.",
+        "Koz maça: sözünü tutan aldığı el kadar, tutamayan sözü kadar eksi yazar.",
+        "Seçilen el sayısı bitince en çok puanı olan kazanır.",
+      ],
+    },
+  ],
   casus: [
     {
       title: "Kartlar",

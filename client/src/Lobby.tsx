@@ -154,6 +154,34 @@ const OPTIONS: Record<GameId, Option[]> = {
     },
     TURN_TIME,
   ],
+  batak: [
+    {
+      key: "mode",
+      label: "Oyun türü",
+      choices: [
+        { value: 0, label: "İhaleli" },
+        { value: 1, label: "Koz maça" },
+      ],
+      initial: 0,
+      hint: (v) =>
+        v.mode
+          ? "Koz hep maçadır. Herkes kaç el alacağını söyler; tutturan aldığı el kadar, tutturamayan sözü kadar eksi yazar."
+          : "En yüksek ihaleyi veren kozu seçer ve ilk kartı atar. İhaleyi çıkaramazsa ihalesi kadar eksi yazar.",
+    },
+    {
+      key: "teams",
+      label: "Eşli",
+      toggle: true,
+      choices: ON_OFF,
+      initial: 0,
+      hint: (v) =>
+        v.teams
+          ? "Karşılıklı oturanlar eş olur: listede 1. ile 3., 2. ile 4. sıradakiler. Eşlerin aldığı eller birlikte sayılır, ihale en az 7."
+          : "Herkes kendi adına oynar, ihale en az 4.",
+    },
+    { key: "rounds", label: "El sayısı", choices: nums([5, 10, 15, 20]), initial: 10 },
+    TURN_TIME,
+  ],
   casus: [
     {
       key: "category",
