@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { GameId } from "../../shared/protocol";
+import { guideHref } from "./Guide";
 
 interface Section {
   title: string;
@@ -183,6 +184,12 @@ export function Rules({ game }: { game: GameId }) {
           </ul>
         </section>
       ))}
+      <p className="rules-guide">
+        {/* A new tab, so the game keeps running while the guide is open. */}
+        <a className="text-link" href={guideHref(game)} target="_blank" rel="noopener">
+          Ekran görüntüleriyle anlatım
+        </a>
+      </p>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { PistiScreen } from "./games/PistiScreen";
 import { CasusScreen } from "./games/CasusScreen";
 import { setSound, useSoundEnabled } from "./sound";
 import { BrandMark } from "./BrandMark";
+import { Guide, useGuideRoute } from "./Guide";
 
 export function App() {
   return (
@@ -24,7 +25,10 @@ function Main() {
   const { room, ready } = useConnection();
   const act = useAct();
   const sound = useSoundEnabled();
+  const guide = useGuideRoute();
 
+  // The guide needs no server, so it opens even while the connection wakes up.
+  if (guide !== null) return <Guide game={guide} />;
   if (!ready) {
     return (
       <div className="center-screen">

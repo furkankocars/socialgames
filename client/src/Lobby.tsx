@@ -6,6 +6,7 @@ import { Toggle } from "./Toggle";
 import { setColorblind, useColorblind } from "./prefs";
 import { Avatar } from "./Avatar";
 import { GameEmblem } from "./GameEmblem";
+import { guideHref } from "./Guide";
 import { CASUS_CATEGORIES } from "../../shared/games/casus";
 
 type Values = Record<string, number>;
@@ -288,7 +289,12 @@ export function Lobby({ room }: { room: RoomView }) {
       </section>
 
       <section className="lobby-game">
-        <h2 className="lobby-h">Ne oynuyoruz?</h2>
+        <h2 className="lobby-h">
+          Ne oynuyoruz?
+          <a className="text-link lobby-guide" href={guideHref(selected.id)}>
+            {selected.name} nasıl oynanır
+          </a>
+        </h2>
         <ul className="game-choices">
           {GAMES.map((g) => (
             <li key={g.id}>

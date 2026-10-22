@@ -34,6 +34,7 @@ Her oyun ekranında masa solda, yanında (telefonda altında) sekmeler durur: oy
 
 ## Özellikler
 
+- **Nasıl oynanır rehberi.** Her oyun için adım adım anlatım, gerçek oyun ekranlarından görüntülerle. Ana sayfada oyunun adına, lobide "nasıl oynanır" linkine ya da oyun içindeki Kurallar sekmesine dokununca açılır (`/#rehber/okey` gibi). Görüntüler `client/public/rehber/` altında.
 - **Oda sistemi.** Oda kodu ya da `?oda=KOD` linkiyle katılım. Oda sahibi oyunu seçer, ayarları yapar, oyuncu çıkarabilir. Bir oyun bitince aynı odada başka bir oyuna geçilir.
 - **Botlar.** Eksik koltuklara bot eklenebilir; bağlantısı kopan oyuncunun yerine 15 saniye sonra bot geçer, oyuncu dönünce koltuğunu geri alır. Satrançta bot seviyesi seçilir (kolay, orta, zor).
 - **Masa sohbeti ve ikram.** Oyun ekranının altında sohbet var. Çay, Türk kahvesi, oralet ya da soda bir oyuncunun koltuğuna sürüklenerek ısmarlanır, masanın ortasına bırakılırsa herkese gider.
