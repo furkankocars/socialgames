@@ -112,6 +112,32 @@ export function GameEmblem({ game, size = 56 }: { game: GameId; size?: number })
           <rect x="40" y="38" width="12" height="9" rx="1" transform="rotate(-10 46 42)" className="e-stamp" />
         </>
       )}
+      {game === "lingo" && (
+        <>
+          <rect x="4" y="12" width="17" height="17" rx="3" className="e-hit" />
+          <rect x="23.5" y="12" width="17" height="17" rx="3" className="e-tile" />
+          <circle cx="32" cy="20.5" r="6.5" className="e-near" />
+          <rect x="43" y="12" width="17" height="17" rx="3" className="e-tile" />
+          <rect x="4" y="33" width="17" height="17" rx="3" className="e-hit" />
+          <rect x="23.5" y="33" width="17" height="17" rx="3" className="e-hit" />
+          <rect x="43" y="33" width="17" height="17" rx="3" className="e-hit" />
+          <text x="12.5" y="25.5" className="e-num e-letter e-on-hit">
+            L
+          </text>
+          <text x="32" y="25.5" className="e-num e-letter">
+            İ
+          </text>
+          <text x="12.5" y="46.5" className="e-num e-letter e-on-hit">
+            L
+          </text>
+          <text x="32" y="46.5" className="e-num e-letter e-on-hit">
+            İ
+          </text>
+          <text x="51.5" y="46.5" className="e-num e-letter e-on-hit">
+            N
+          </text>
+        </>
+      )}
     </svg>
   );
 }
