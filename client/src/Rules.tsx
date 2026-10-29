@@ -219,8 +219,8 @@ const RULES: Record<GameId, Section[]> = {
     {
       title: "İşaretler",
       items: [
-        "Kırmızı kare: harf kelimede var ve yeri doğru.",
-        "Sarı daire: harf kelimede var ama başka bir yerde.",
+        "Yeşil kare: harf kelimede var ve yeri doğru.",
+        "Sarı kare: harf kelimede var ama başka bir yerde.",
         "Koyu kare: harf kelimede yok. Aynı harf iki kez yazıldıysa kelimede kaç tane varsa o kadarı işaretlenir.",
         "Diğerlerinin tahminlerini sadece renk olarak görürsün; harfleri tur bitince açılır.",
       ],

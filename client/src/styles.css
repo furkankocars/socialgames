@@ -418,12 +418,14 @@ label.row select {
   fill: var(--ink);
 }
 .e-hit {
-  fill: var(--accent);
+  fill: #3d9a5c;
   stroke: var(--ink);
   stroke-width: 1.5;
 }
 .e-near {
   fill: #e2a93b;
+  stroke: var(--ink);
+  stroke-width: 1.5;
 }
 .e-letter {
   font-size: 13px;

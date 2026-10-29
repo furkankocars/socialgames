@@ -5,8 +5,8 @@ export const LINGO_LENGTHS = [4, 5, 6] as const;
 export const LINGO_TRIES = 5;
 
 /**
- * What a letter of a guess shows, as on Lingo: a red square for a letter in
- * its place, a yellow circle for a letter that is in the word somewhere else.
+ * What a letter of a guess shows: a green square for a letter in
+ * its place, a yellow square for a letter that is in the word somewhere else.
  */
 export type LingoMark = "hit" | "near" | "miss";
 
