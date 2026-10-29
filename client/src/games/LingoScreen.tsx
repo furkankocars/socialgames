@@ -122,7 +122,7 @@ export function LingoScreen({ room }: { room: RoomView }) {
     if (mine?.solved) hint = `Buldun, +${mine.points} puan. Diğerleri bekleniyor.`;
     else if (mine?.done) hint = "Denemelerin bitti. Diğerleri bekleniyor.";
     else if (mine?.rows.length) hint = `${g.tries - mine.rows.length} deneme hakkın kaldı.`;
-    else hint = `${g.tries} deneme hakkın var. Kırmızı kare yerinde, sarı daire kelimede var ama yeri yanlış.`;
+    else hint = `${g.tries} deneme hakkın var. Yeşil kare yerinde, sarı kare kelimede var ama yeri yanlış.`;
   } else {
     const winners = ids.filter((id) => g.boards[id].place === 1);
     title = up(g.word ?? "");
@@ -168,7 +168,7 @@ export function LingoScreen({ room }: { room: RoomView }) {
               {g.phase === "finished" && <p className="lingo-foot">{standings(g, room)}</p>}
             </div>
           ) : (
-            <div className={`keyboard ${playing ? "" : "off"}`}>
+            <div className="keyboard">
               {KEYS.map((row, i) => (
                 <div className="kb-row" key={i}>
                   {i === 2 && (

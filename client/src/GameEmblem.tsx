@@ -115,8 +115,7 @@ export function GameEmblem({ game, size = 56 }: { game: GameId; size?: number })
       {game === "lingo" && (
         <>
           <rect x="4" y="12" width="17" height="17" rx="3" className="e-hit" />
-          <rect x="23.5" y="12" width="17" height="17" rx="3" className="e-tile" />
-          <circle cx="32" cy="20.5" r="6.5" className="e-near" />
+          <rect x="23.5" y="12" width="17" height="17" rx="3" className="e-near" />
           <rect x="43" y="12" width="17" height="17" rx="3" className="e-tile" />
           <rect x="4" y="33" width="17" height="17" rx="3" className="e-hit" />
           <rect x="23.5" y="33" width="17" height="17" rx="3" className="e-hit" />

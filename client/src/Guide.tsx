@@ -371,7 +371,7 @@ const GUIDES: Record<GameId, GameGuide> = {
       },
       {
         title: "İşaretleri oku",
-        text: "Kırmızı kare harfin yerini bildiğini, sarı daire harfin kelimede olup başka yerde durduğunu, koyu kare harfin kelimede olmadığını söyler. Yerini bildiğin harfler sonraki satırda silik olarak görünür; klavyedeki tuşlar da aynı renklere boyanır.",
+        text: "Yeşil kare harfin yerini bildiğini, sarı kare harfin kelimede olup başka yerde durduğunu, koyu kare harfin kelimede olmadığını söyler. Yerini bildiğin harfler sonraki satırda silik olarak görünür; klavyedeki tuşlar da aynı renklere boyanır.",
       },
       {
         title: "Rakipleri izle",
@@ -395,9 +395,9 @@ const GUIDES: Record<GameId, GameGuide> = {
       "Eksik koltuğa bot oturtulabilir; botlar her tahmini birkaç saniye düşünerek yapar.",
     ],
     tips: [
-      "İlk denemede farklı ve sık sesli harfleri (A, E, İ) dene; sarı daireler ikinci tahmini çok daraltır.",
+      "İlk denemede farklı ve sık sesli harfleri (A, E, İ) dene; sarı kareler ikinci tahmini çok daraltır.",
       "Koyu kareye dönen harfleri klavyede görürsün; o tuşlara bir daha basma.",
-      "Rakiplerin şeridinde çok kırmızı görüyorsan acele et: ilk bulan iki puan fazla alır.",
+      "Rakiplerin şeridinde çok yeşil görüyorsan acele et: ilk bulan iki puan fazla alır.",
     ],
   },
 };

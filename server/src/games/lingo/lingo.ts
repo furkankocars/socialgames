@@ -141,7 +141,7 @@ export class LingoGame implements GameInstance {
 
   /**
    * A bot guesses a word that fits what its own board has shown so far, now
-   * and then forgetting the yellow circles and grey letters, and takes its
+   * and then forgetting the yellow and dark squares, and takes its
    * time over each guess.
    */
   botAction(playerId: string): GameAction | null {
@@ -232,7 +232,7 @@ export class LingoGame implements GameInstance {
   }
 }
 
-/** Whether a word would have lit up a past guess the same way; a careless bot only checks the red squares. */
+/** Whether a word would have lit up a past guess the same way; a careless bot only checks the green squares. */
 function sameMarks(a: LingoMark[], b: LingoMark[], careless: boolean): boolean {
   return a.every((m, i) => (careless ? (m === "hit") === (b[i] === "hit") : m === b[i]));
 }
