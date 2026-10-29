@@ -417,6 +417,21 @@ label.row select {
 .e-eye {
   fill: var(--ink);
 }
+.e-hit {
+  fill: var(--accent);
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.e-near {
+  fill: #e2a93b;
+}
+.e-letter {
+  font-size: 13px;
+  fill: var(--ink);
+}
+.e-on-hit {
+  fill: var(--accent-ink);
+}
 
 /* Home */
 .home {

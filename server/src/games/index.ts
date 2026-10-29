@@ -7,5 +7,6 @@ import { chess } from "./chess/chess.js";
 import { pisti } from "./pisti/pisti.js";
 import { batak } from "./batak/batak.js";
 import { casus } from "./casus/casus.js";
+import { lingo } from "./lingo/lingo.js";
 
-export const gameDefinitions: Record<GameId, GameDefinition> = { tabu, vampir, okey, okey101, chess, pisti, batak, casus };
+export const gameDefinitions: Record<GameId, GameDefinition> = { tabu, vampir, okey, okey101, chess, pisti, batak, casus, lingo };

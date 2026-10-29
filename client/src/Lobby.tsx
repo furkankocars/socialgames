@@ -209,6 +209,23 @@ const OPTIONS: Record<GameId, Option[]> = {
     },
     { key: "rounds", label: "Tur sayısı", choices: nums([1, 3, 5, 7]), initial: 3 },
   ],
+  lingo: [
+    {
+      key: "length",
+      label: "Kelime uzunluğu",
+      choices: [...nums([4, 5, 6], " harf"), { value: 0, label: "Büyüyen" }],
+      initial: 5,
+      hint: (v) => (v.length ? "Her turda herkes aynı kelimenin peşine düşer; ilk harf verilir." : "Kelimeler turdan tura 4, 5, 6 harf diye uzar, sonra yeniden 4'ten başlar."),
+    },
+    {
+      key: "roundSeconds",
+      label: "Tur süresi",
+      choices: nums([60, 90, 120, 180], " sn"),
+      initial: 90,
+      hint: "Süre bitince ya da herkes bulunca ya da denemeler bitince kelime açılır.",
+    },
+    { key: "rounds", label: "Tur sayısı", choices: nums([3, 5, 10, 15]), initial: 5 },
+  ],
 };
 
 const OPTIONS_KEY = "socialgames.options";

@@ -10,6 +10,7 @@ import { ChessScreen } from "./games/ChessScreen";
 import { PistiScreen } from "./games/PistiScreen";
 import { CasusScreen } from "./games/CasusScreen";
 import { BatakScreen } from "./games/BatakScreen";
+import { LingoScreen } from "./games/LingoScreen";
 import { setSound, useSoundEnabled } from "./sound";
 import { FullscreenButton } from "./Fullscreen";
 import { BrandMark } from "./BrandMark";
@@ -94,6 +95,7 @@ function Main() {
             {room.selectedGame === "pisti" && <PistiScreen room={room} />}
             {room.selectedGame === "batak" && <BatakScreen room={room} />}
             {room.selectedGame === "casus" && <CasusScreen room={room} />}
+            {room.selectedGame === "lingo" && <LingoScreen room={room} />}
           </>
         )}
       </main>

@@ -1,0 +1,450 @@
+/*
+ * Lingo: letter squares on green felt, as on the TV show. A red square is a
+ * letter in its place, a yellow circle a letter that is somewhere else in the
+ * word; the shape tells them apart as well as the colour does.
+ */
+.lingo {
+  display: flex;
+  flex-direction: column;
+}
+.lingo-table {
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--felt-ink);
+  background: radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.08), transparent 60%), var(--felt);
+  border: 10px solid var(--wood);
+  box-shadow:
+    inset 0 0 0 1.5px var(--wood-dark),
+    0 10px 24px -14px rgb(35 32 27 / 0.7);
+}
+.lingo-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem 0.8rem;
+  border-bottom: 1.5px solid rgb(255 255 255 / 0.12);
+}
+.lingo-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.75;
+}
+.lingo-head h2 {
+  font-size: 1.45rem;
+  margin: 0.15rem 0 0.25rem;
+}
+.phase-result .lingo-head h2,
+.phase-finished .lingo-head h2 {
+  font-size: 1.9rem;
+  letter-spacing: 0.08em;
+  color: var(--brass-soft);
+}
+.lingo-head p {
+  font-size: 0.92rem;
+  opacity: 0.85;
+  max-width: 54ch;
+}
+.lingo-clock {
+  flex: none;
+  font-family: var(--display);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.6rem;
+  font-weight: 800;
+  padding: 0.15rem 0.6rem;
+  border-radius: 8px;
+  background: var(--felt-dark);
+  color: var(--brass-soft);
+}
+.lingo-clock.low {
+  color: #ff9b85;
+}
+
+/* The others, as a strip of tiny scoreboards. */
+.rivals {
+  list-style: none;
+  margin: 0;
+  padding: 0.6rem 1.1rem;
+  display: flex;
+  gap: 0.5rem 1.1rem;
+  overflow-x: auto;
+  border-bottom: 1.5px solid rgb(255 255 255 / 0.12);
+  scrollbar-width: none;
+}
+.rival {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+.rival-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.rival-name {
+  font-weight: 700;
+  font-size: 0.85rem;
+  max-width: 9ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rival-state {
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+.rival.solved .rival-state {
+  color: var(--brass-soft);
+  opacity: 1;
+}
+.rival-dots {
+  display: grid;
+  grid-template-columns: repeat(var(--len), 6px);
+  gap: 2px;
+}
+.rival-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: rgb(255 255 255 / 0.14);
+}
+.rival-dots i.hit {
+  background: var(--accent);
+  box-shadow: 0 0 0 0.5px rgb(255 255 255 / 0.5);
+}
+.rival-dots i.near {
+  background: var(--brass);
+  border-radius: 50%;
+}
+.rival-dots i.miss {
+  background: rgb(0 0 0 / 0.35);
+}
+
+.lingo-board {
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Letter squares */
+.lingo-grid {
+  --cell: min(54px, calc((100vw - 90px) / var(--len)));
+  display: grid;
+  gap: 6px;
+}
+.lingo-row {
+  display: grid;
+  grid-template-columns: repeat(var(--len), var(--cell));
+  gap: 6px;
+}
+.cell {
+  width: var(--cell);
+  height: var(--cell);
+  display: grid;
+  place-items: center;
+  position: relative;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: calc(var(--cell) * 0.5);
+  color: var(--ink);
+  background: rgb(0 0 0 / 0.16);
+  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.12);
+}
+.lingo-row.current .cell {
+  background: var(--tile);
+  box-shadow:
+    inset 0 -3px 0 var(--tile-edge),
+    0 2px 0 rgb(0 0 0 / 0.25);
+}
+.cell.ghost .cell-letter {
+  opacity: 0.28;
+}
+.cell-letter {
+  position: relative;
+  z-index: 1;
+}
+.cell.hit,
+.cell.near,
+.cell.miss {
+  animation: lingo-flip 0.42s ease-out both;
+  animation-delay: calc(var(--i) * 90ms);
+}
+.cell.hit {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow:
+    inset 0 -3px 0 var(--accent-dark),
+    0 2px 0 rgb(0 0 0 / 0.25);
+}
+.cell.near {
+  background: var(--tile);
+  box-shadow:
+    inset 0 -3px 0 var(--tile-edge),
+    0 2px 0 rgb(0 0 0 / 0.25);
+}
+.cell.near::before {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border-radius: 50%;
+  background: #e2a93b;
+  box-shadow: inset 0 -2px 0 var(--brass);
+}
+.cell.miss {
+  background: var(--felt-dark);
+  color: rgb(238 243 232 / 0.75);
+  box-shadow: inset 0 0 0 1.5px rgb(0 0 0 / 0.2);
+}
+.lingo-row.shake {
+  animation: lingo-shake 0.4s ease-in-out;
+}
+
+/* Keyboard */
+.keyboard {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.keyboard.off {
+  opacity: 0.5;
+}
+.kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+button.kb-key {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 46px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--ink);
+  background: var(--tile);
+  box-shadow: inset 0 -3px 0 var(--tile-edge);
+}
+button.kb-key:not(.hit, .near, .miss, .kb-enter):hover:not(:disabled) {
+  background: var(--paper-hi);
+}
+button.kb-key:active:not(:disabled) {
+  translate: 0 2px;
+  box-shadow: inset 0 -1px 0 var(--tile-edge);
+}
+button.kb-key.kb-wide {
+  flex: 1.6 1 0;
+  max-width: 76px;
+  font-family: var(--body);
+  font-size: 0.85rem;
+}
+.keyboard button.kb-key.kb-enter {
+  background: var(--brass-soft);
+  box-shadow: inset 0 -3px 0 var(--brass);
+}
+.keyboard button.kb-key.hit {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: inset 0 -3px 0 var(--accent-dark);
+}
+.keyboard button.kb-key.near {
+  background: #e2a93b;
+  box-shadow: inset 0 -3px 0 var(--brass);
+}
+.keyboard button.kb-key.miss {
+  background: var(--felt-dark);
+  color: rgb(238 243 232 / 0.45);
+  box-shadow: none;
+}
+
+.lingo-after {
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+.lingo-foot {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Side panels */
+.lingo-log {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+}
+.lingo-boards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.board-card h4 {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+.board-state {
+  font-family: var(--body);
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+.lingo-grid.mini {
+  --cell: 26px;
+  gap: 3px;
+}
+.lingo-grid.mini .lingo-row {
+  gap: 3px;
+}
+.lingo-grid.mini .cell {
+  border-radius: 3px;
+  animation: none;
+}
+.lingo-grid.mini .cell.miss {
+  background: #50604f;
+}
+
+@media (max-width: 520px) {
+  .lingo-table {
+    border-width: 7px;
+  }
+  .lingo-head {
+    padding: 0.7rem 0.8rem 0.6rem;
+  }
+  .lingo-head h2 {
+    font-size: 1.2rem;
+  }
+  .lingo-head p {
+    font-size: 0.85rem;
+  }
+  .rivals {
+    padding: 0.5rem 0.8rem;
+  }
+  .lingo-board {
+    padding: 0.8rem 0.5rem 0.8rem;
+    gap: 0.8rem;
+  }
+  .lingo-grid {
+    --cell: min(52px, calc((100vw - 80px) / var(--len)));
+  }
+  button.kb-key {
+    height: 46px;
+    font-size: 0.98rem;
+  }
+  .kb-row {
+    gap: 3px;
+  }
+}
+
+/*
+ * A phone held sideways: the squares on the left, the keyboard on the right,
+ * both sized to the screen's height.
+ */
+@media (orientation: landscape) and (max-height: 540px) {
+  .lingo-table {
+    height: var(--stage-h);
+    display: flex;
+    flex-direction: column;
+    border-width: 6px;
+  }
+  .lingo-head {
+    padding: 0.35rem 0.7rem;
+    align-items: center;
+  }
+  .lingo-head h2 {
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .phase-result .lingo-head h2,
+  .phase-finished .lingo-head h2 {
+    font-size: 1.3rem;
+  }
+  .lingo-head p {
+    display: none;
+  }
+  .lingo-clock {
+    font-size: 1.15rem;
+  }
+  .rivals {
+    padding: 0.3rem 0.7rem;
+  }
+  .rival .avatar {
+    display: none;
+  }
+  .lingo-board {
+    flex: 1;
+    min-height: 0;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 0.4rem 0.6rem;
+    gap: 1rem;
+  }
+  .lingo-grid {
+    --cell: min(40px, calc((var(--stage-h) - 150px) / 5 - 4px));
+    gap: 4px;
+  }
+  .lingo-row {
+    gap: 4px;
+  }
+  .keyboard {
+    flex: 1;
+    max-width: 380px;
+    gap: 4px;
+  }
+  button.kb-key {
+    height: min(40px, calc((var(--stage-h) - 140px) / 3));
+    font-size: 0.9rem;
+  }
+  .kb-row {
+    gap: 3px;
+  }
+  .lingo-after {
+    flex: 1;
+    max-width: 260px;
+  }
+}
+
+@keyframes lingo-flip {
+  0% {
+    transform: rotateX(0deg);
+    filter: brightness(1.15);
+  }
+  50% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+@keyframes lingo-shake {
+  20%,
+  60% {
+    translate: -6px 0;
+  }
+  40%,
+  80% {
+    translate: 6px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell.hit,
+  .cell.near,
+  .cell.miss,
+  .lingo-row.shake {
+    animation: none;
+  }
+}

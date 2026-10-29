@@ -48,7 +48,7 @@ const BASICS: Step[] = [
   },
   {
     title: "Eksik koltuğa bot oturt",
-    text: "Okey, 101, Pişti, Batak, Satranç ve Vampir Köylü'de boş koltuğa bot oturtulabilir. Tabu ve Casus konuşarak oynandığı için botla oynanmaz.",
+    text: "Okey, 101, Pişti, Batak, Satranç, Lingo ve Vampir Köylü'de boş koltuğa bot oturtulabilir. Tabu ve Casus konuşarak oynandığı için botla oynanmaz.",
   },
   {
     title: "Oyun sırasında",
@@ -359,6 +359,45 @@ const GUIDES: Record<GameId, GameGuide> = {
       "Kelimeyi biliyorsan çok net sorma; \"Antalya'da denize girdin mi?\" casusa cevabı verir. \"En son ne zaman gittin?\" yeter.",
       "Casussan ilk sorulara genel cevaplar ver, diğerlerinin cevaplarından listeyi daralt.",
       "Kelimeler listesinde elediğin kelimelerin üstünü çizebilirsin; bunu sadece sen görürsün.",
+    ],
+  },
+  lingo: {
+    lead: "Televizyondaki Lingo yarışmasının masaya gelmiş hali, Lingohunt gibi uygulamalardaki düelloların grup versiyonu. Herkes aynı gizli kelimeyi aynı anda arar; ilk harf verilir, beş deneme hakkın var.",
+    steps: [
+      {
+        title: "Kelimeyi tahmin et",
+        text: "Başlıkta kelimenin ilk harfi ve kaç harfli olduğu yazar; ilk harf satıra hazır gelir. Gerisini alttaki klavyeyle (bilgisayarda kendi klavyenle de) yaz ve Dene'ye bas. Tahmin o harfle başlayan, sözlükte olan bir kelime olmalı.",
+        shot: shot("lingo-masa", "Lingo masası: tahmin satırları, rakiplerin renkleri ve klavye", 368, 655),
+      },
+      {
+        title: "İşaretleri oku",
+        text: "Kırmızı kare harfin yerini bildiğini, sarı daire harfin kelimede olup başka yerde durduğunu, koyu kare harfin kelimede olmadığını söyler. Yerini bildiğin harfler sonraki satırda silik olarak görünür; klavyedeki tuşlar da aynı renklere boyanır.",
+      },
+      {
+        title: "Rakipleri izle",
+        text: "Üstteki şeritte diğer oyuncuların satırları sadece renk olarak görünür: kimin kaçıncı denemede olduğunu, kaç harfi yerine oturttuğunu görürsün ama harflerini göremezsin. Tur bitince herkesin yazdığı kelimeler Tahminler sekmesinde açılır.",
+      },
+      {
+        title: "Tur sonu",
+        text: "Süre biter, herkes bulur ya da herkesin denemesi biterse kelime açılır. Sonraki tur birkaç saniye sonra kendiliğinden başlar; oda sahibi beklemeden de başlatabilir.",
+        shot: shot("lingo-sonuc", "Tur sonu: açılan kelime ve sonraki tur düğmesi", 368, 544),
+      },
+    ],
+    scoring: [
+      "Kelimeyi 1. denemede bulan 5, 2.'de 4, 3.'te 3, 4.'te 2, 5.'te 1 puan alır.",
+      "Turda ilk bulan 2, ikinci bulan 1 puan daha alır; hız da sayılır.",
+      "Turlar bitince en çok puanı olan kazanır.",
+    ],
+    house: [
+      "Yarışmada takımlar sırayla tahmin eder; bu masada herkes aynı anda kendi satırlarında oynar.",
+      "Kelime uzunluğu 4, 5 ya da 6 harf seçilir; Büyüyen seçilirse kelimeler turdan tura 4, 5, 6 diye uzar.",
+      "Tahminlerde çekimli kelimeler de geçer (\"evler\" gibi), ama aranan kelimeler hep yalın, gündelik kelimelerdir.",
+      "Eksik koltuğa bot oturtulabilir; botlar her tahmini birkaç saniye düşünerek yapar.",
+    ],
+    tips: [
+      "İlk denemede farklı ve sık sesli harfleri (A, E, İ) dene; sarı daireler ikinci tahmini çok daraltır.",
+      "Koyu kareye dönen harfleri klavyede görürsün; o tuşlara bir daha basma.",
+      "Rakiplerin şeridinde çok kırmızı görüyorsan acele et: ilk bulan iki puan fazla alır.",
     ],
   },
 };

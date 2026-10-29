@@ -1,7 +1,7 @@
 // Types shared by the server and the client. Kept dependency-free so both sides
 // can import them through a relative path.
 
-export type GameId = "tabu" | "vampir" | "okey" | "okey101" | "chess" | "pisti" | "batak" | "casus";
+export type GameId = "tabu" | "vampir" | "okey" | "okey101" | "chess" | "pisti" | "batak" | "casus" | "lingo";
 
 export interface GameInfo {
   id: GameId;
@@ -82,6 +82,14 @@ export const GAMES: GameInfo[] = [
     maxPlayers: 16,
     // Bots can neither ask nor answer questions.
     bots: false,
+  },
+  {
+    id: "lingo",
+    name: "Lingo",
+    description: "İlk harf verilir, kelimeyi beş denemede bul. Herkes aynı kelimeyi arar, ilk bulan öne geçer.",
+    minPlayers: 2,
+    maxPlayers: 8,
+    bots: true,
   },
 ];
 
