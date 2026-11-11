@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { LINGO_TRIES, lingoPoints } from "../../shared/games/lingo.js";
 import { LingoGame, NEXT_ROUND_MS, markGuess } from "../src/games/lingo/lingo.js";
 import { LINGO_ANSWERS, LINGO_WORDS, normalize } from "../src/games/lingo/words.js";
 import { fakeContext } from "./helpers.js";
@@ -35,17 +36,23 @@ describe("Lingo", () => {
     expect(LINGO_WORDS.has("ışık")).toBe(true);
   });
 
-  it("shows the first letter and keeps other players' letters hidden", () => {
+  it("lets players guess in turn on one board everyone sees", () => {
     const { game, ids, word, wrong } = setup(3);
     const view = game.getView(ids[0]);
     expect(view.length).toBe(5);
     expect(view.first).toBe(word()[0]);
     expect(view.word).toBeNull();
-    game.handleAction(ids[1], { type: "guess", word: wrong() });
-    expect(game.getView(ids[1]).boards[ids[1]].rows[0].word).toBe(wrong());
-    const seen = game.getView(ids[0]).boards[ids[1]].rows[0];
-    expect(seen.word).toBeNull();
-    expect(seen.marks).toHaveLength(5);
+    expect(view.turn).toBe(ids[0]);
+    expect(() => game.handleAction(ids[1], { type: "guess", word: wrong() })).toThrow("Sıra");
+    game.handleAction(ids[0], { type: "draft", word: "AB1c" });
+    expect(game.getView(ids[2]).draft).toBe("abc");
+    game.handleAction(ids[1], { type: "draft", word: "x" });
+    expect(game.getView(ids[2]).draft).toBe("abc");
+    game.handleAction(ids[0], { type: "guess", word: wrong() });
+    const seen = game.getView(ids[2]);
+    expect(seen.rows).toEqual([{ by: ids[0], word: wrong(), marks: markGuess(wrong(), word()) }]);
+    expect(seen.turn).toBe(ids[1]);
+    expect(seen.draft).toBe("");
   });
 
   it("refuses guesses that break the rules", () => {
@@ -55,61 +62,78 @@ describe("Lingo", () => {
     expect(() => game.handleAction(ids[0], { type: "guess", word: other })).toThrow("ile başlamalı");
     expect(() => game.handleAction(ids[0], { type: "guess", word: word()[0] + "qqqq" })).toThrow("sözlükte yok");
     game.handleAction(ids[0], { type: "guess", word: wrong() });
-    expect(() => game.handleAction(ids[0], { type: "guess", word: wrong() })).toThrow("zaten denedin");
+    expect(() => game.handleAction(ids[1], { type: "guess", word: wrong() })).toThrow("zaten denendi");
   });
 
-  it("scores by try and order, then reveals the word", () => {
+  it("gives the finder points by row, then reveals the word", () => {
     const { game, ids, word, wrong } = setup(3);
-    game.handleAction(ids[1], { type: "guess", word: wrong() });
-    game.handleAction(ids[1], { type: "guess", word: word() });
     game.handleAction(ids[0], { type: "guess", word: wrong() });
-    game.handleAction(ids[0], { type: "guess", word: wrong(1) });
-    game.handleAction(ids[0], { type: "guess", word: word().toLocaleUpperCase("tr") });
-    for (let i = 0; i < 5; i++) game.handleAction(ids[2], { type: "guess", word: wrong(i) });
-    const view = game.getView(ids[2]);
+    game.handleAction(ids[1], { type: "guess", word: wrong(1) });
+    game.handleAction(ids[2], { type: "guess", word: word().toLocaleUpperCase("tr") });
+    const view = game.getView(ids[0]);
     expect(view.phase).toBe("result");
     expect(view.word).toBe(word());
-    // 2nd try 4 + first place 2; 3rd try 3 + second place 1.
-    expect(view.scores).toEqual({ [ids[0]]: 4, [ids[1]]: 6, [ids[2]]: 0 });
-    expect(view.boards[ids[1]].rows[0].word).toBe(wrong());
+    expect(view.solver).toBe(ids[2]);
+    expect(view.turn).toBeNull();
+    expect(view.scores).toEqual({ [ids[0]]: 0, [ids[1]]: 0, [ids[2]]: lingoPoints(3) });
     expect(view.nextMsLeft).toBe(NEXT_ROUND_MS);
   });
 
-  it("ends the round when time runs out, deals the next on its own and grows the words", () => {
+  it("ends the round when the board fills up", () => {
+    const { game, ids, wrong } = setup(2);
+    for (let i = 0; i < LINGO_TRIES; i++) game.handleAction(ids[i % 2], { type: "guess", word: wrong(i) });
+    const view = game.getView(ids[0]);
+    expect(view.phase).toBe("result");
+    expect(view.solver).toBeNull();
+  });
+
+  it("passes the turn when time runs out, rotates the opener and grows the words", () => {
     const { game, ids, runTimers } = setup(2, { length: 0, rounds: 3 });
     expect(game.getView(ids[0]).length).toBe(4);
     runTimers();
+    let view = game.getView(ids[0]);
+    expect(view.rows).toEqual([{ by: ids[0], word: null, marks: [] }]);
+    expect(view.turn).toBe(ids[1]);
+    for (let i = 1; i < LINGO_TRIES; i++) runTimers();
     expect(game.getView(ids[0]).phase).toBe("result");
     runTimers();
-    expect(game.getView(ids[0]).phase).toBe("play");
-    expect(game.getView(ids[0]).length).toBe(5);
-    runTimers();
+    view = game.getView(ids[0]);
+    expect(view.phase).toBe("play");
+    expect(view.length).toBe(5);
+    expect(view.turn).toBe(ids[1]);
+    expect(view.order).toEqual([ids[1], ids[0]]);
+    for (let i = 0; i < LINGO_TRIES; i++) runTimers();
     expect(() => game.handleAction(ids[1], { type: "next" })).toThrow("oda sahibi");
     game.handleAction(ids[0], { type: "next" });
     expect(game.getView(ids[0]).length).toBe(6);
-    runTimers();
+    for (let i = 0; i < LINGO_TRIES; i++) runTimers();
     expect(game.getView(ids[0]).phase).toBe("finished");
     expect(game.getView(ids[0]).nextMsLeft).toBeNull();
   });
 
-  it("lets bots play out a game at their own pace", () => {
+  it("lets bots think, type their word out and play a game", () => {
     let solved = 0;
     for (let seed = 1; seed <= 20; seed++) {
       const { game, ids, bots, runTimers } = setup(3, {}, seed);
       ids.forEach((id) => bots.add(id));
-      for (const id of ids) expect(game.botAction(id)).toBeNull();
-      for (let step = 0; step < 100 && game.getView(ids[0]).phase === "play"; step++) {
-        vi.advanceTimersByTime(15_000);
+      expect(game.botAction(ids[0])).toBeNull();
+      expect(game.botAction(ids[1])).toBeNull();
+      let drafts = 0;
+      for (let step = 0; step < 200 && game.getView(ids[0]).phase === "play"; step++) {
+        vi.advanceTimersByTime(1_000);
         for (const id of ids) {
           const action = game.botAction(id);
-          if (action) game.handleAction(id, action);
+          if (!action) continue;
+          if (action.type === "draft") drafts++;
+          game.handleAction(id, action);
         }
       }
       const view = game.getView(ids[0]);
       expect(view.phase).toBe("result");
-      solved += ids.filter((id) => view.boards[id].solved).length;
+      expect(drafts).toBeGreaterThan(0);
+      if (view.solver) solved++;
       runTimers();
     }
-    expect(solved).toBeGreaterThan(20);
+    expect(solved).toBeGreaterThan(10);
   });
 });

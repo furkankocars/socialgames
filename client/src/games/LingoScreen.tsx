@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import "./lingo.css";
 import type { RoomView } from "../../../shared/protocol";
-import type { LingoAction, LingoBoard, LingoMark, LingoView } from "../../../shared/games/lingo";
+import type { LingoAction, LingoMark, LingoView } from "../../../shared/games/lingo";
 import { request } from "../socket";
 import { useAct } from "../toast";
 import { nameOf, useCountdown } from "../hooks";
@@ -23,8 +23,7 @@ export function LingoScreen({ room }: { room: RoomView }) {
   const act = useAct();
   const send = (action: LingoAction) => act(request("game:action", action));
   const isHost = room.hostId === room.you;
-  const mine = g.boards[room.you];
-  const playing = g.phase === "play" && !!mine && !mine.done;
+  const myTurn = g.phase === "play" && g.turn === room.you;
   // The letters typed after the given first one.
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,56 +32,75 @@ export function LingoScreen({ room }: { room: RoomView }) {
     setShake(true);
     setTimeout(() => setShake(false), 450);
   };
-  const roundEndsAt = useMemo(() => (g.roundMsLeft === null ? null : Date.now() + g.roundMsLeft), [g.round, g.phase]); // eslint-disable-line react-hooks/exhaustive-deps
+  const turnKey = `${g.round}-${g.phase}-${g.rows.length}-${g.turn}`;
+  const turnEndsAt = useMemo(() => (g.turnMsLeft === null ? null : Date.now() + g.turnMsLeft), [turnKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const nextAt = useMemo(() => (g.nextMsLeft === null ? null : Date.now() + g.nextMsLeft), [g.round, g.phase]); // eslint-disable-line react-hooks/exhaustive-deps
-  const left = useCountdown(roundEndsAt);
+  const left = useCountdown(turnEndsAt);
   const nextLeft = useCountdown(nextAt);
-  const ids = room.players.filter((p) => g.boards[p.id]).map((p) => p.id);
-  const rivals = ids.filter((id) => id !== room.you);
+  const ids = g.order.filter((id) => room.players.some((p) => p.id === id));
 
-  useEffect(() => setDraft(""), [g.round]);
+  // Players often type the whole word, given letter included: the first press of that letter is taken as it.
+  const firstTaken = useRef(false);
+  useEffect(() => {
+    setDraft("");
+    firstTaken.current = false;
+  }, [turnKey]);
   useEffect(() => {
     if (g.phase === "play") chime();
-    else if (mine?.solved) success();
+    else if (g.solver === room.you) success();
     else buzz();
   }, [g.phase, g.round]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (myTurn) chime();
+  }, [myTurn, g.rows.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Letters this player has learned about, for the keyboard.
+  // The table watches the letters as they are typed.
+  useEffect(() => {
+    if (myTurn) void request("game:action", { type: "draft", word: draft });
+  }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Letters the board has shown so far, for the keyboard.
   const keyMarks = useMemo(() => {
     const best = new Map<string, LingoMark>();
-    for (const row of mine?.rows ?? [])
+    for (const row of g.rows)
       [...(row.word ?? "")].forEach((c, i) => {
         const m = row.marks[i];
         if (!best.has(c) || RANK[m] > RANK[best.get(c)!]) best.set(c, m);
       });
     return best;
-  }, [mine]);
+  }, [g.rows]);
 
   // Letters found in place so far, shown faintly in the row being typed, as on the show.
   const known = useMemo(() => {
     const k: (string | null)[] = Array.from({ length: g.length }, (_, i) => (i === 0 ? g.first : null));
-    for (const row of mine?.rows ?? []) [...(row.word ?? "")].forEach((c, i) => row.marks[i] === "hit" && (k[i] = c));
+    for (const row of g.rows) [...(row.word ?? "")].forEach((c, i) => row.marks[i] === "hit" && (k[i] = c));
     return k;
-  }, [mine, g.length, g.first]);
+  }, [g.rows, g.length, g.first]);
 
   const submit = async () => {
-    if (!playing || busy) return;
-    if (draft.length < g.length - 1) {
+    if (!myTurn || busy) return;
+    if ([...draft].length < g.length - 1) {
       nudge();
       return;
     }
     setBusy(true);
     const res = await send({ type: "guess", word: g.first + draft });
     setBusy(false);
-    if (res.ok) setDraft("");
+    if (res.ok) {
+      setDraft("");
+      firstTaken.current = false;
+    }
     else nudge();
   };
 
   const press = (key: string) => {
-    if (!playing) return;
+    if (!myTurn) return;
     if (key === "enter") void submit();
     else if (key === "back") setDraft((d) => [...d].slice(0, -1).join(""));
-    else if ([...draft].length < g.length - 1) {
+    else if (!draft && key === g.first && !firstTaken.current) {
+      firstTaken.current = true;
+      clack(0.4);
+    } else if ([...draft].length < g.length - 1) {
       clack(0.4);
       setDraft((d) => d + key);
     }
@@ -104,12 +122,13 @@ export function LingoScreen({ room }: { room: RoomView }) {
     return () => removeEventListener("keydown", onKey);
   }, []);
 
+  const playing = g.phase === "play" && g.turn !== null;
   const rows = Array.from({ length: g.tries }, (_, r) => {
-    const row = mine?.rows[r];
-    if (row) return <Row key={r} letters={[...(row.word ?? "")]} marks={row.marks} length={g.length} />;
-    if (playing && r === mine.rows.length) {
-      const typed = [g.first, ...draft];
-      return <Row key={r} letters={typed} ghosts={known} length={g.length} current shake={shake} />;
+    const row = g.rows[r];
+    if (row) return <Row key={r} who={row.by} name={nameOf(room, row.by)} letters={[...(row.word ?? "")]} marks={row.marks} lost={row.word === null} length={g.length} />;
+    if (playing && r === g.rows.length) {
+      const typed = [g.first, ...(myTurn ? draft : g.draft)];
+      return <Row key={r} who={g.turn!} name={nameOf(room, g.turn)} letters={typed} ghosts={known} length={g.length} current shake={shake && myTurn} />;
     }
     return <Row key={r} letters={[]} length={g.length} />;
   });
@@ -119,14 +138,12 @@ export function LingoScreen({ room }: { room: RoomView }) {
   let hint: string;
   if (!over) {
     title = `${up(g.first)} ile başlayan ${g.length} harfli kelime`;
-    if (mine?.solved) hint = `Buldun, +${mine.points} puan. Diğerleri bekleniyor.`;
-    else if (mine?.done) hint = "Denemelerin bitti. Diğerleri bekleniyor.";
-    else if (mine?.rows.length) hint = `${g.tries - mine.rows.length} deneme hakkın kaldı.`;
-    else hint = `${g.tries} deneme hakkın var. Yeşil kare yerinde, sarı kare kelimede var ama yeri yanlış.`;
+    const rowsLeft = g.tries - g.rows.length;
+    if (myTurn) hint = `Sıra sende. Yazdıkların herkese görünüyor. Tahtada ${rowsLeft} satır kaldı.`;
+    else hint = `Sıra ${nameOf(room, g.turn)} oyuncusunda; yazdıklarını canlı izliyorsun. Tahtada ${rowsLeft} satır kaldı.`;
   } else {
-    const winners = ids.filter((id) => g.boards[id].place === 1);
     title = up(g.word ?? "");
-    hint = winners.length ? `İlk ${nameOf(room, winners[0])} buldu.` : "Bu kelimeyi kimse bulamadı.";
+    hint = g.solver ? `${g.solver === room.you ? "Sen" : nameOf(room, g.solver)} ${g.rows.length}. satırda buldu, +${g.points} puan.` : "Bu kelimeyi kimse bulamadı.";
   }
 
   const stage = (
@@ -140,19 +157,21 @@ export function LingoScreen({ room }: { room: RoomView }) {
             <h2>{title}</h2>
             <p>{hint}</p>
           </div>
-          {roundEndsAt && <span className={`lingo-clock ${left <= 15 ? "low" : ""}`}>{`${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`}</span>}
+          {turnEndsAt && <span className={`lingo-clock ${left <= 5 ? "low" : ""}`}>{left}</span>}
         </header>
-        {rivals.length > 0 && (
-          <ul className="rivals">
-            {rivals.map((id) => (
-              <li key={id}>
-                <Rival name={nameOf(room, id)} id={id} board={g.boards[id]} tries={g.tries} length={g.length} />
-              </li>
-            ))}
-          </ul>
-        )}
+        <ol className="turns" aria-label="Sıra">
+          {ids.map((id) => (
+            <li key={id} className={`turn-seat ${id === g.turn ? "on" : ""} ${id === g.solver ? "solved" : ""}`} aria-current={id === g.turn ? "true" : undefined}>
+              <Avatar id={id} name={nameOf(room, id)} size={30} />
+              <span className="turn-text">
+                <span className="turn-name">{id === room.you ? "Sen" : nameOf(room, id)}</span>
+                <span className="turn-state">{id === g.turn ? (id === room.you ? "sıra sende" : "yazıyor") : `${g.scores[id]} puan`}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
         <div className="lingo-board">
-          <div className="lingo-grid" style={{ "--len": g.length } as React.CSSProperties} aria-label="Tahminlerin">
+          <div className="lingo-grid" style={{ "--len": g.length } as React.CSSProperties} aria-label="Ortak tahta" aria-live="polite">
             {rows}
           </div>
           {over ? (
@@ -168,21 +187,21 @@ export function LingoScreen({ room }: { room: RoomView }) {
               {g.phase === "finished" && <p className="lingo-foot">{standings(g, room)}</p>}
             </div>
           ) : (
-            <div className="keyboard">
+            <div className={`keyboard ${myTurn ? "" : "waiting"}`}>
               {KEYS.map((row, i) => (
                 <div className="kb-row" key={i}>
                   {i === 2 && (
-                    <button className="kb-key kb-wide" onClick={() => press("back")} disabled={!playing} aria-label="Sil">
+                    <button className="kb-key kb-wide" onClick={() => press("back")} disabled={!myTurn} aria-label="Sil">
                       Sil
                     </button>
                   )}
                   {row.map((k) => (
-                    <button key={k} className={`kb-key ${keyMarks.get(k) ?? ""}`} onClick={() => press(k)} disabled={!playing}>
+                    <button key={k} className={`kb-key ${keyMarks.get(k) ?? ""}`} onClick={() => press(k)} disabled={!myTurn}>
                       {up(k)}
                     </button>
                   ))}
                   {i === 2 && (
-                    <button className="kb-key kb-wide kb-enter" onClick={() => press("enter")} disabled={!playing || busy}>
+                    <button className="kb-key kb-wide kb-enter" onClick={() => press("enter")} disabled={!myTurn || busy}>
                       Dene
                     </button>
                   )}
@@ -208,7 +227,7 @@ export function LingoScreen({ room }: { room: RoomView }) {
           ))}
         </tbody>
       </table>
-      <p className="small muted">Bulduğun denemeye göre 5, 4, 3, 2 ya da 1 puan. Turda ilk bulan 2, ikinci bulan 1 puan daha alır.</p>
+      <p className="small muted">Kelimeyi bulan, bulduğu satıra göre 6, 5, 4, 3, 2 ya da 1 puan alır.</p>
       <ol className="lingo-log">
         {g.log
           .slice()
@@ -220,57 +239,36 @@ export function LingoScreen({ room }: { room: RoomView }) {
     </div>
   );
 
-  const boards = (
-    <div className="lingo-boards">
-      <p className="small muted">{over ? "Herkesin bu turdaki tahminleri." : "Tur bitince herkesin tahmin ettiği kelimeler de görünür."}</p>
-      {ids.map((id) => (
-        <section key={id} className="board-card">
-          <h4>
-            {nameOf(room, id)}
-            {id === room.you && " (sen)"}
-            <span className="board-state">{boardState(g.boards[id])}</span>
-          </h4>
-          <div className="lingo-grid mini" style={{ "--len": g.length } as React.CSSProperties}>
-            {g.boards[id].rows.map((row, r) => (
-              <Row key={r} letters={[...(row.word ?? "")]} marks={row.marks} length={g.length} />
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-
-  return (
-    <GameLayout
-      room={room}
-      stage={stage}
-      panels={[
-        { id: "scores", label: "Puanlar", content: scores },
-        { id: "boards", label: "Tahminler", content: boards },
-      ]}
-      className="lingo-play"
-    />
-  );
+  return <GameLayout room={room} stage={stage} panels={[{ id: "scores", label: "Puanlar", content: scores }]} className="lingo-play" />;
 }
 
-/** One row of letter squares; marks turn them red, yellow or dark. */
+/** One row of letter squares, with who played it; marks turn them green, yellow or dark. */
 function Row({
+  who,
+  name,
   letters,
   marks,
   ghosts,
   length,
+  lost = false,
   current = false,
   shake = false,
 }: {
+  who?: string;
+  name?: string;
   letters: string[];
   marks?: LingoMark[];
   ghosts?: (string | null)[];
   length: number;
+  lost?: boolean;
   current?: boolean;
   shake?: boolean;
 }) {
   return (
-    <div className={`lingo-row ${current ? "current" : ""} ${shake ? "shake" : ""}`}>
+    <div className={`lingo-row ${current ? "current" : ""} ${lost ? "lost" : ""} ${shake ? "shake" : ""}`} aria-label={lost ? `${name}: süre doldu` : undefined}>
+      <span className="row-who" title={name}>
+        {who && name && <Avatar id={who} name={name} size={22} />}
+      </span>
       {Array.from({ length }, (_, i) => {
         const m = marks?.[i];
         const c = letters[i];
@@ -286,32 +284,9 @@ function Row({
           </span>
         );
       })}
+      {lost && <span className="row-lost">süre doldu</span>}
     </div>
   );
-}
-
-/** Another player's board as the show's scoreboard: just the colours, never the letters. */
-function Rival({ id, name, board, tries, length }: { id: string; name: string; board: LingoBoard; tries: number; length: number }) {
-  return (
-    <div className={`rival ${board.solved ? "solved" : ""}`}>
-      <Avatar id={id} name={name} size={30} />
-      <span className="rival-text">
-        <span className="rival-name">{name}</span>
-        <span className="rival-state">{boardState(board)}</span>
-      </span>
-      <span className="rival-dots" style={{ "--len": length } as React.CSSProperties} aria-hidden>
-        {Array.from({ length: tries }, (_, r) =>
-          Array.from({ length }, (_, i) => <i key={`${r}-${i}`} className={board.rows[r]?.marks[i] ?? ""} />),
-        )}
-      </span>
-    </div>
-  );
-}
-
-function boardState(b: LingoBoard): string {
-  if (b.solved) return b.place === 1 ? `ilk buldu, +${b.points}` : `buldu, +${b.points}`;
-  if (b.done) return "bulamadı";
-  return b.rows.length ? `${b.rows.length}. deneme` : "düşünüyor";
 }
 
 function standings(g: LingoView, room: RoomView): string {

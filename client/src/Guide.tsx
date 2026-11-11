@@ -362,37 +362,37 @@ const GUIDES: Record<GameId, GameGuide> = {
     ],
   },
   lingo: {
-    lead: "Televizyondaki Lingo yarışmasının masaya gelmiş hali, Lingohunt gibi uygulamalardaki düelloların grup versiyonu. Herkes aynı gizli kelimeyi aynı anda arar; ilk harf verilir, beş deneme hakkın var.",
+    lead: "Televizyondaki Lingo yarışmasının masaya gelmiş hali, Lingohunt gibi uygulamalardaki düelloların grup versiyonu. Masa tek bir gizli kelimeyi sırayla tahmin eder; ilk harf verilir, herkesin tahmini aynı tahtada herkese görünür.",
     steps: [
       {
         title: "Kelimeyi tahmin et",
-        text: "Başlıkta kelimenin ilk harfi ve kaç harfli olduğu yazar; ilk harf satıra hazır gelir. Gerisini alttaki klavyeyle (bilgisayarda kendi klavyenle de) yaz ve Dene'ye bas. Tahmin o harfle başlayan, sözlükte olan bir kelime olmalı.",
+        text: "Başlıkta kelimenin ilk harfi ve kaç harfli olduğu yazar; ilk harf satıra hazır gelir. Sıra sana gelince gerisini alttaki klavyeyle (bilgisayarda kendi klavyenle de) yaz ve Dene'ye bas. Tahmin o harfle başlayan, sözlükte olan, daha önce denenmemiş bir kelime olmalı.",
         shot: shot("lingo-masa", "Lingo masası: tahmin satırları, rakiplerin renkleri ve klavye", 368, 655),
       },
       {
         title: "İşaretleri oku",
-        text: "Yeşil kare harfin yerini bildiğini, sarı kare harfin kelimede olup başka yerde durduğunu, koyu kare harfin kelimede olmadığını söyler. Yerini bildiğin harfler sonraki satırda silik olarak görünür; klavyedeki tuşlar da aynı renklere boyanır.",
+        text: "Yeşil kare harfin yerini bildiğini, sarı kare harfin kelimede olup başka yerde durduğunu, koyu kare harfin kelimede olmadığını söyler. Yeri bulunan harfler sonraki satırda silik olarak görünür; klavyedeki tuşlar da aynı renklere boyanır.",
       },
       {
-        title: "Rakipleri izle",
-        text: "Üstteki şeritte diğer oyuncuların satırları sadece renk olarak görünür: kimin kaçıncı denemede olduğunu, kaç harfi yerine oturttuğunu görürsün ama harflerini göremezsin. Tur bitince herkesin yazdığı kelimeler Tahminler sekmesinde açılır.",
+        title: "Sırayı izle",
+        text: "Üstteki şeritte sıranın kimde olduğu yanar. Sırası gelen yazarken harfleri herkesin ekranında canlı belirir; her satırın solunda o tahmini kimin yaptığı durur. Başkalarının tahminlerinden çıkan renkler senin işine de yarar. Sıra süresi biterse satır boş geçer.",
       },
       {
         title: "Tur sonu",
-        text: "Süre biter, herkes bulur ya da herkesin denemesi biterse kelime açılır. Sonraki tur birkaç saniye sonra kendiliğinden başlar; oda sahibi beklemeden de başlatabilir.",
+        text: "Biri kelimeyi bulur ya da 6 satır dolarsa kelime açılır. Sonraki tur birkaç saniye sonra kendiliğinden başlar; oda sahibi beklemeden de başlatabilir.",
         shot: shot("lingo-sonuc", "Tur sonu: açılan kelime ve sonraki tur düğmesi", 368, 544),
       },
     ],
     scoring: [
-      "Kelimeyi 1. denemede bulan 5, 2.'de 4, 3.'te 3, 4.'te 2, 5.'te 1 puan alır.",
-      "Turda ilk bulan 2, ikinci bulan 1 puan daha alır; hız da sayılır.",
+      "Kelimeyi bulan, bulduğu satıra göre puan alır: 1. satırda 6, 2.'de 5, 3.'te 4, 4.'te 3, 5.'te 2, 6.'da 1.",
+      "Sıranın sende olduğu satırda bulmak önemli: önceki tahminleri iyi okuyan kazanır.",
       "Turlar bitince en çok puanı olan kazanır.",
     ],
     house: [
-      "Yarışmada takımlar sırayla tahmin eder; bu masada herkes aynı anda kendi satırlarında oynar.",
+      "Yarışmadaki gibi sırayla tahmin edilir; burada takım yerine her oyuncu kendi sırasında oynar ve turu her seferinde başka biri açar.",
       "Kelime uzunluğu 4, 5 ya da 6 harf seçilir; Büyüyen seçilirse kelimeler turdan tura 4, 5, 6 diye uzar.",
       "Tahminlerde çekimli kelimeler de geçer (\"evler\" gibi), ama aranan kelimeler hep yalın, gündelik kelimelerdir.",
-      "Eksik koltuğa bot oturtulabilir; botlar her tahmini birkaç saniye düşünerek yapar.",
+      "Eksik koltuğa bot oturtulabilir; botlar sıraları gelince birkaç saniye düşünüp kelimelerini harf harf yazar.",
     ],
     tips: [
       "İlk denemede farklı ve sık sesli harfleri (A, E, İ) dene; sarı kareler ikinci tahmini çok daraltır.",
