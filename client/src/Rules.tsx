@@ -212,8 +212,10 @@ const RULES: Record<GameId, Section[]> = {
     {
       title: "Kelime",
       items: [
-        "Her turda masadaki herkes aynı gizli kelimeyi arar. Kelimenin ilk harfi ve kaç harfli olduğu baştan verilir.",
-        "Herkesin 5 deneme hakkı var. Tahmin o harfle başlayan, sözlükte olan bir kelime olmalı.",
+        "Her turda masa tek bir gizli kelimeyi arar. Kelimenin ilk harfi ve kaç harfli olduğu baştan verilir.",
+        "Oyuncular sırayla tahmin eder; herkesin tahmini aynı tahtaya, 6 satıra yazılır. Turu her seferinde başka biri açar.",
+        "Sırası gelen yazarken harfleri herkes canlı görür. Tahmin o harfle başlayan, sözlükte olan, daha önce denenmemiş bir kelime olmalı.",
+        "Sıra süresi biterse o satır boş geçer, sıra sonrakine geçer.",
       ],
     },
     {
@@ -222,15 +224,13 @@ const RULES: Record<GameId, Section[]> = {
         "Yeşil kare: harf kelimede var ve yeri doğru.",
         "Sarı kare: harf kelimede var ama başka bir yerde.",
         "Koyu kare: harf kelimede yok. Aynı harf iki kez yazıldıysa kelimede kaç tane varsa o kadarı işaretlenir.",
-        "Diğerlerinin tahminlerini sadece renk olarak görürsün; harfleri tur bitince açılır.",
       ],
     },
     {
       title: "Puan",
       items: [
-        "Kelimeyi 1. denemede bulan 5, 2.'de 4, 3.'te 3, 4.'te 2, 5.'te 1 puan alır.",
-        "Turda kelimeyi ilk bulan 2, ikinci bulan 1 puan daha alır.",
-        "Süre biter, herkes bulur ya da herkesin denemesi biterse kelime açılır. Turlar bitince en çok puanı olan kazanır.",
+        "Kelimeyi bulan, bulduğu satıra göre puan alır: 1. satırda 6, 2.'de 5, ... 6.'da 1.",
+        "Kelime bulununca ya da 6 satır dolunca kelime açılır. Turlar bitince en çok puanı olan kazanır.",
       ],
     },
   ],

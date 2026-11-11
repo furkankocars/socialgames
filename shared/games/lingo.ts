@@ -1,8 +1,11 @@
 /** Lengths the host can pick; 0 means the words grow 4, 5, 6 and start over. */
 export const LINGO_LENGTHS = [4, 5, 6] as const;
 
-/** Tries each player gets at a word, as on the TV show. */
-export const LINGO_TRIES = 5;
+/** Rows on the shared board each round; the players take them in turn. */
+export const LINGO_TRIES = 6;
+
+/** Seconds a player has for a turn, as the host can pick them. */
+export const LINGO_TURN_SECONDS = [20, 30, 45, 60] as const;
 
 /**
  * What a letter of a guess shows: a green square for a letter in
@@ -11,20 +14,11 @@ export const LINGO_TRIES = 5;
 export type LingoMark = "hit" | "near" | "miss";
 
 export interface LingoRow {
-  /** The guessed word; null on someone else's board while the round is on. */
+  /** Who took this row. */
+  by: string;
+  /** The guessed word; null when the turn ran out before a guess. */
   word: string | null;
   marks: LingoMark[];
-}
-
-export interface LingoBoard {
-  rows: LingoRow[];
-  solved: boolean;
-  /** Out of tries or solved. */
-  done: boolean;
-  /** Points this board earned in the round, once it is solved. */
-  points: number;
-  /** 1 for the first player to solve the word this round, 2 for the next, and so on. */
-  place: number | null;
 }
 
 export type LingoPhase = "play" | "result" | "finished";
@@ -39,21 +33,28 @@ export interface LingoView {
   first: string;
   /** The word, once the round is over. */
   word: string | null;
-  roundMsLeft: number | null;
-  roundSeconds: number;
+  /** The one board the whole table fills in turn, open to everyone. */
+  rows: LingoRow[];
+  /** Whose turn it is; null once the round is over. */
+  turn: string | null;
+  /** What the player on turn has typed so far, after the first letter, live for everyone. */
+  draft: string;
+  turnMsLeft: number | null;
+  turnSeconds: number;
+  /** Who found the word this round, and the points it brought. */
+  solver: string | null;
+  points: number;
   /** Until the next round deals itself. */
   nextMsLeft: number | null;
-  boards: Record<string, LingoBoard>;
+  /** Seat order, starting with whoever opens this round. */
+  order: string[];
   scores: Record<string, number>;
   log: string[];
 }
 
-export type LingoAction = { type: "guess"; word: string } | { type: "next" };
+export type LingoAction = { type: "guess"; word: string } | { type: "draft"; word: string } | { type: "next" };
 
-/** Points for solving on each try: 5 on the first, 1 on the fifth. */
-export function lingoPoints(tryNumber: number): number {
-  return LINGO_TRIES + 1 - tryNumber;
+/** Points for finding the word on each row of the board: 6 on the first, 1 on the sixth. */
+export function lingoPoints(row: number): number {
+  return LINGO_TRIES + 1 - row;
 }
-
-/** Extra points for the first and second player to solve a word. */
-export const LINGO_PLACE_BONUS = [2, 1];

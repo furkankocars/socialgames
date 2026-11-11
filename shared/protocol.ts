@@ -86,7 +86,7 @@ export const GAMES: GameInfo[] = [
   {
     id: "lingo",
     name: "Lingo",
-    description: "İlk harf verilir, kelimeyi beş denemede bul. Herkes aynı kelimeyi arar, ilk bulan öne geçer.",
+    description: "İlk harf verilir, masa aynı kelimeyi sırayla tahmin eder. Herkes herkesin yazdığını görür, bulan puanı alır.",
     minPlayers: 2,
     maxPlayers: 8,
     bots: true,
